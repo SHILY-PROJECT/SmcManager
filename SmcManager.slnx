@@ -1,3 +1,4 @@
 <Solution>
+  <Folder Name="/Solution Items/" />
   <Project Path="src/SmcManager.Ui/SmcManager.Ui.csproj" />
 </Solution>
