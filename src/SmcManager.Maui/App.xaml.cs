@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 
-namespace SmcManager.Ui;
+namespace SmcManager.Maui;
 
 public partial class App : Application
 {

@@ -1,7 +1,7 @@
 ﻿using Android.App;
 using Android.Runtime;
 
-namespace SmcManager.Ui;
+namespace SmcManager.Maui;
 
 [Application]
 public class MainApplication : MauiApplication

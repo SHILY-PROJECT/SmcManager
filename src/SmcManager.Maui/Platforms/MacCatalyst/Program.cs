@@ -1,7 +1,7 @@
 ﻿using ObjCRuntime;
 using UIKit;
 
-namespace SmcManager.Ui;
+namespace SmcManager.Maui;
 
 public class Program
 {

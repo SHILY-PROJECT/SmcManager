@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 
-namespace SmcManager.Ui;
+namespace SmcManager.Maui;
 
 public static class MauiProgram
 {

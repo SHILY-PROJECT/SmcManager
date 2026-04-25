@@ -1,4 +1,4 @@
-﻿namespace SmcManager.Ui;
+﻿namespace SmcManager.Maui;
 
 public partial class MainPage : ContentPage
 {

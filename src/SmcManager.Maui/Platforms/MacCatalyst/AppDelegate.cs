@@ -1,6 +1,6 @@
 ﻿using Foundation;
 
-namespace SmcManager.Ui;
+namespace SmcManager.Maui;
 
 [Register("AppDelegate")]
 public class AppDelegate : MauiUIApplicationDelegate
