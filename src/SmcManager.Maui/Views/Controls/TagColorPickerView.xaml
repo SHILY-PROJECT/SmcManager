@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="SmcManager.Maui.Views.Controls.TagColorPickerView"
+             x:Name="Root"
+             WidthRequest="48"
+             HeightRequest="48">
+    <Border x:Name="SwatchButton"
+            HorizontalOptions="Fill"
+            VerticalOptions="Fill"
+            Stroke="{DynamicResource Divider}"
+            StrokeThickness="1">
+        <Border.StrokeShape>
+            <RoundRectangle CornerRadius="12" />
+        </Border.StrokeShape>
+        <Border.GestureRecognizers>
+            <TapGestureRecognizer Tapped="OnOpenPicker" />
+        </Border.GestureRecognizers>
+        <Grid>
+            <Border x:Name="SelectedSwatchBorder"
+                    StrokeThickness="0">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="12" />
+                </Border.StrokeShape>
+            </Border>
+            <Border BackgroundColor="#66000000"
+                    VerticalOptions="End"
+                    HorizontalOptions="End"
+                    WidthRequest="18"
+                    HeightRequest="18"
+                    Margin="0,0,2,2"
+                    StrokeThickness="0">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="6" />
+                </Border.StrokeShape>
+                <Label Text="▾"
+                       FontSize="9"
+                       TextColor="White"
+                       HorizontalOptions="Center"
+                       VerticalOptions="Center" />
+            </Border>
+        </Grid>
+    </Border>
+</ContentView>

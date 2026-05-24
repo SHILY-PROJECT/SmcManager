@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:SmcManager.Maui.ViewModels"
+             xmlns:models="clr-namespace:SmcManager.Maui.Models"
+             xmlns:controls="clr-namespace:SmcManager.Maui.Views.Controls"
+             x:Class="SmcManager.Maui.Views.GroupsPage"
+             x:DataType="vm:GroupsViewModel"
+             Shell.NavBarIsVisible="False"
+             Title="Группы"
+             BackgroundColor="{DynamicResource BackgroundPrimary}">
+    <Grid RowDefinitions="Auto,Auto,*">
+        <controls:AppHeaderView Grid.Row="0"
+                                Title="Группы"
+                                ShowTitle="True" />
+        <VerticalStackLayout Grid.Row="1" Spacing="8" Margin="16,0,16,8">
+            <Label Text="{Binding EmptyTagsHint}"
+                   TextColor="{DynamicResource TextMuted}"
+                   FontSize="13"
+                   IsVisible="{Binding EmptyTagsHint, Converter={StaticResource StringNotEmpty}}" />
+            <CollectionView ItemsSource="{Binding TagChips}"
+                            HeightRequest="40"
+                            SelectionMode="None">
+                <CollectionView.ItemsLayout>
+                    <LinearItemsLayout Orientation="Horizontal" ItemSpacing="6" />
+                </CollectionView.ItemsLayout>
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="models:TagChipViewModel">
+                        <controls:TagChipView Text="{Binding Name}"
+                                              ColorHex="{Binding ColorHex}"
+                                              IsSelected="{Binding IsSelected}"
+                                              SelectCommand="{Binding Source={RelativeSource AncestorType={x:Type vm:GroupsViewModel}}, Path=SelectTagCommand}"
+                                              SelectParameter="{Binding .}" />
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </VerticalStackLayout>
+
+        <CollectionView Grid.Row="2"
+                        ItemsSource="{Binding FilteredItems}"
+                        Margin="16,0,16,16">
+            <CollectionView.ItemsLayout>
+                <LinearItemsLayout Orientation="Vertical" ItemSpacing="5" />
+            </CollectionView.ItemsLayout>
+            <CollectionView.EmptyView>
+                <Label Text="В этой группе пока нет контента."
+                       TextColor="{DynamicResource TextMuted}"
+                       HorizontalOptions="Center"
+                       Margin="24" />
+            </CollectionView.EmptyView>
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="vm:ContentItemDisplayModel">
+                    <controls:ContentCardView Item="{Binding .}"
+                                              DeleteCommand="{Binding Source={RelativeSource AncestorType={x:Type vm:GroupsViewModel}}, Path=DeleteItemCommand}" />
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+    </Grid>
+</ContentPage>

@@ -1,0 +1,275 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:SmcManager.Maui.ViewModels"
+             xmlns:views="clr-namespace:SmcManager.Maui.Views"
+             xmlns:controls="clr-namespace:SmcManager.Maui.Views.Controls"
+             xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+             x:Class="SmcManager.Maui.Views.ContentDetailPage"
+             x:DataType="vm:ContentDetailViewModel"
+             Shell.NavBarIsVisible="False"
+             Shell.BackgroundColor="{DynamicResource BackgroundPrimary}"
+             Shell.ForegroundColor="{DynamicResource TextPrimary}"
+             Shell.TitleColor="{DynamicResource TextPrimary}"
+             Title="Просмотр"
+             BackgroundColor="{DynamicResource BackgroundPrimary}">
+    <Grid RowDefinitions="Auto,*,Auto">
+        <controls:AppHeaderView Grid.Row="0"
+                                Title="Просмотр"
+                                ShowTitle="True" />
+
+        <ScrollView Grid.Row="1">
+            <VerticalStackLayout Padding="16,16,16,8" Spacing="16">
+            <Grid IsVisible="{Binding HasMediaSlides}"
+                  ColumnDefinitions="44,*,44"
+                  ColumnSpacing="6">
+                <ImageButton x:Name="CarouselPrevButton"
+                             Grid.Column="0"
+                             Style="{StaticResource CarouselNavButtonStyle}"
+                             Command="{Binding GoToPreviousSlideCommand}"
+                             IsVisible="{Binding ShowCarouselPrevious}"
+                             VerticalOptions="Center"
+                             SemanticProperties.Description="Предыдущий слайд" />
+
+                <Grid Grid.Column="1">
+                    <CarouselView x:Name="MediaCarousel"
+                                  ItemsSource="{Binding MediaSlides}"
+                                  HeightRequest="{Binding MediaCarouselHeight}"
+                                  IndicatorView="{x:Reference MediaIndicator}"
+                                  Loop="False">
+                        <CarouselView.ItemTemplate>
+                            <views:MediaSlideDataTemplateSelector>
+                                <views:MediaSlideDataTemplateSelector.ImageTemplate>
+                                    <DataTemplate x:DataType="vm:MediaSlideViewModel">
+                                        <Image Source="{Binding ImageSource}"
+                                               Aspect="AspectFit"
+                                               HorizontalOptions="Fill"
+                                               VerticalOptions="Center" />
+                                    </DataTemplate>
+                                </views:MediaSlideDataTemplateSelector.ImageTemplate>
+                                <views:MediaSlideDataTemplateSelector.VideoTemplate>
+                                    <DataTemplate x:DataType="vm:MediaSlideViewModel">
+                                        <toolkit:MediaElement Source="{Binding VideoSource}"
+                                                              ShouldAutoPlay="False"
+                                                              ShouldShowPlaybackControls="True"
+                                                              ShouldLoopPlayback="False"
+                                                              Aspect="AspectFit"
+                                                              HorizontalOptions="Fill"
+                                                              VerticalOptions="Center" />
+                                    </DataTemplate>
+                                </views:MediaSlideDataTemplateSelector.VideoTemplate>
+                            </views:MediaSlideDataTemplateSelector>
+                        </CarouselView.ItemTemplate>
+                    </CarouselView>
+
+                    <ImageButton x:Name="ShareMediaButton"
+                                 Style="{StaticResource IconActionButtonStyle}"
+                                 WidthRequest="40"
+                                 HeightRequest="40"
+                                 Padding="8"
+                                 Margin="8"
+                                 HorizontalOptions="End"
+                                 VerticalOptions="Start"
+                                 IsVisible="{Binding HasMediaSlides}"
+                                 Command="{Binding ShareMediaCommand}"
+                                 SemanticProperties.Description="Поделиться файлом" />
+                </Grid>
+
+                <ImageButton x:Name="CarouselNextButton"
+                             Grid.Column="2"
+                             Style="{StaticResource CarouselNavButtonStyle}"
+                             Command="{Binding GoToNextSlideCommand}"
+                             IsVisible="{Binding ShowCarouselNext}"
+                             VerticalOptions="Center"
+                             SemanticProperties.Description="Следующий слайд" />
+            </Grid>
+
+            <IndicatorView x:Name="MediaIndicator"
+                           IndicatorColor="{DynamicResource TextMuted}"
+                           SelectedIndicatorColor="{DynamicResource AccentPrimary}"
+                           IsVisible="{Binding HasMultipleSlides}"
+                           HorizontalOptions="Center" />
+
+            <Label Text="{Binding SlideIndicator}"
+                   HorizontalOptions="Center"
+                   TextColor="{DynamicResource TextMuted}"
+                   FontSize="12"
+                   IsVisible="{Binding HasMultipleSlides}" />
+
+            <Label Text="{Binding AuthorTitle}"
+                   Style="{StaticResource EmojiCapableLabelStyle}"
+                   FontSize="20"
+                   FontAttributes="Bold"
+                   TextColor="{DynamicResource TextPrimary}" />
+
+            <toolkit:Expander IsExpanded="True"
+                              IsVisible="{Binding IsContentLoaded}">
+                <toolkit:Expander.Header>
+                    <controls:SettingsSectionHeaderView Icon="📝"
+                                                        Title="Описание" />
+                </toolkit:Expander.Header>
+                <Border Style="{StaticResource CardBorderStyle}" Margin="0,8,0,0">
+                    <VerticalStackLayout Spacing="8" Padding="4">
+                        <Grid ColumnDefinitions="*,Auto"
+                              ColumnSpacing="8"
+                              IsVisible="{Binding ShowEditCaptionButton}">
+                            <Label Text="Текст из соцсети"
+                                   Style="{StaticResource SectionSubtitleStyle}"
+                                   VerticalOptions="Center" />
+                            <ImageButton x:Name="EditCaptionButton"
+                                         Grid.Column="1"
+                                         Style="{StaticResource IconActionButtonStyle}"
+                                         Command="{Binding EditCaptionCommand}"
+                                         SemanticProperties.Description="Редактировать описание" />
+                        </Grid>
+
+                        <Label Text="{Binding Caption}"
+                               Style="{StaticResource EmojiCapableLabelStyle}"
+                               TextColor="{DynamicResource TextPrimary}"
+                               FontSize="14"
+                               LineBreakMode="WordWrap"
+                               MaxLines="{Binding DescriptionMaxLines}"
+                               IsVisible="{Binding ShowCaptionReadOnly}" />
+
+                        <Label Text="Описание отсутствует"
+                               TextColor="{DynamicResource TextMuted}"
+                               FontSize="14"
+                               IsVisible="{Binding ShowCaptionPlaceholder}" />
+
+                        <VerticalStackLayout IsVisible="{Binding IsEditingCaption}"
+                                             Spacing="8">
+                            <Border Style="{StaticResource InputBorderStyle}">
+                                <Editor Text="{Binding CaptionDraft}"
+                                        Style="{StaticResource EmojiCapableEditorStyle}"
+                                        AutoSize="TextChanges"
+                                        MinimumHeightRequest="160"
+                                        TextColor="{DynamicResource TextPrimary}"
+                                        BackgroundColor="Transparent" />
+                            </Border>
+                            <Grid ColumnDefinitions="*,*"
+                                  ColumnSpacing="10">
+                                <Button Text="Сохранить"
+                                        Style="{StaticResource PrimaryButtonStyle}"
+                                        Command="{Binding SaveCaptionCommand}" />
+                                <Button Grid.Column="1"
+                                        Text="Отмена"
+                                        Style="{StaticResource SecondaryButtonStyle}"
+                                        Command="{Binding CancelCaptionEditCommand}" />
+                            </Grid>
+                        </VerticalStackLayout>
+
+                        <Button Text="{Binding DescriptionToggleText}"
+                                Style="{StaticResource NeutralTextButtonStyle}"
+                                Command="{Binding ToggleDescriptionCommand}"
+                                IsVisible="{Binding CanToggleDescription}"
+                                HorizontalOptions="Start" />
+                    </VerticalStackLayout>
+                </Border>
+            </toolkit:Expander>
+
+            <toolkit:Expander IsExpanded="True"
+                              IsVisible="{Binding IsContentLoaded}">
+                <toolkit:Expander.Header>
+                    <controls:SettingsSectionHeaderView Icon="🗒️"
+                                                        Title="Комментарий" />
+                </toolkit:Expander.Header>
+                <Border Style="{StaticResource CardBorderStyle}" Margin="0,8,0,0">
+                    <VerticalStackLayout Spacing="8" Padding="4">
+                        <Grid ColumnDefinitions="*,Auto"
+                              ColumnSpacing="8"
+                              IsVisible="{Binding ShowEditCommentButton}">
+                            <Label Text="Ваша заметка к этому контенту"
+                                   Style="{StaticResource SectionSubtitleStyle}"
+                                   VerticalOptions="Center" />
+                            <ImageButton x:Name="EditCommentButton"
+                                         Grid.Column="1"
+                                         Style="{StaticResource IconActionButtonStyle}"
+                                         Command="{Binding EditCommentCommand}"
+                                         SemanticProperties.Description="Редактировать комментарий" />
+                        </Grid>
+
+                        <Label Text="{Binding UserComment}"
+                               Style="{StaticResource EmojiCapableLabelStyle}"
+                               TextColor="{DynamicResource TextPrimary}"
+                               FontSize="14"
+                               LineBreakMode="WordWrap"
+                               IsVisible="{Binding ShowCommentReadOnly}" />
+
+                        <Label Text="Комментарий отсутствует"
+                               TextColor="{DynamicResource TextMuted}"
+                               FontSize="14"
+                               IsVisible="{Binding ShowCommentPlaceholder}" />
+
+                        <VerticalStackLayout IsVisible="{Binding IsEditingComment}"
+                                             Spacing="8">
+                            <Border Style="{StaticResource InputBorderStyle}">
+                                <Editor Text="{Binding CommentDraft}"
+                                        Style="{StaticResource EmojiCapableEditorStyle}"
+                                        Placeholder="Введите комментарий..."
+                                        AutoSize="TextChanges"
+                                        MinimumHeightRequest="120"
+                                        TextColor="{DynamicResource TextPrimary}"
+                                        PlaceholderColor="{DynamicResource TextMuted}"
+                                        BackgroundColor="Transparent" />
+                            </Border>
+                            <Grid ColumnDefinitions="*,*"
+                                  ColumnSpacing="10">
+                                <Button Text="Сохранить"
+                                        Style="{StaticResource PrimaryButtonStyle}"
+                                        Command="{Binding SaveCommentCommand}" />
+                                <Button Grid.Column="1"
+                                        Text="Отмена"
+                                        Style="{StaticResource SecondaryButtonStyle}"
+                                        Command="{Binding CancelCommentEditCommand}" />
+                            </Grid>
+                        </VerticalStackLayout>
+                    </VerticalStackLayout>
+                </Border>
+            </toolkit:Expander>
+            </VerticalStackLayout>
+        </ScrollView>
+
+        <Border Grid.Row="2"
+                BackgroundColor="Transparent"
+                StrokeThickness="0"
+                Padding="16,10,16,16"
+                IsVisible="{Binding IsContentLoaded}">
+            <Grid ColumnDefinitions="Auto,*,Auto"
+                  ColumnSpacing="8">
+                <ImageButton x:Name="DeleteContentButton"
+                             Grid.Column="0"
+                             Style="{StaticResource HeaderIconButtonStyle}"
+                             HorizontalOptions="Start"
+                             Command="{Binding DeleteContentCommand}"
+                             SemanticProperties.Description="Удалить контент" />
+
+                <HorizontalStackLayout Grid.Column="1"
+                                       Spacing="10"
+                                       HorizontalOptions="Center"
+                                       VerticalOptions="Center">
+                    <Button x:Name="OpenInExplorerButton"
+                            Style="{StaticResource SecondaryIconButtonStyle}"
+                            Command="{Binding OpenInExplorerCommand}"
+                            SemanticProperties.Description="Показать в проводнике" />
+                    <Button x:Name="OpenFolderButton"
+                            Style="{StaticResource SecondaryIconButtonStyle}"
+                            Command="{Binding OpenFolderCommand}"
+                            SemanticProperties.Description="Открыть папку" />
+                    <Button x:Name="OpenSourceButton"
+                            Style="{StaticResource PrimaryIconButtonStyle}"
+                            Command="{Binding OpenSourceCommand}"
+                            IsVisible="{Binding CanOpenSource}"
+                            SemanticProperties.Description="Открыть в соцсети" />
+                </HorizontalStackLayout>
+
+                <ImageButton x:Name="MediaExpandButton"
+                             Grid.Column="2"
+                             Style="{StaticResource HeaderIconButtonStyle}"
+                             HorizontalOptions="End"
+                             IsVisible="{Binding HasMediaSlides}"
+                             Command="{Binding ToggleMediaExpandCommand}"
+                             SemanticProperties.Description="Изменить размер области медиа" />
+            </Grid>
+        </Border>
+    </Grid>
+</ContentPage>

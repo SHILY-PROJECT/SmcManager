@@ -1,4 +1,6 @@
 <Solution>
   <Folder Name="/Solution Items/" />
+  <Project Path="src/SmcManager.Core/SmcManager.Core.csproj" />
+  <Project Path="src/SmcManager.Infrastructure/SmcManager.Infrastructure.csproj" />
   <Project Path="src/SmcManager.Maui/SmcManager.Maui.csproj" />
 </Solution>

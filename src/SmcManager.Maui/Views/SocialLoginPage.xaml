@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:SmcManager.Maui.ViewModels"
+             xmlns:controls="clr-namespace:SmcManager.Maui.Views.Controls;assembly=SmcManager.Maui"
+             x:Class="SmcManager.Maui.Views.SocialLoginPage"
+             x:DataType="vm:SocialLoginViewModel"
+             Shell.NavBarIsVisible="False"
+             Title="Вход"
+             BackgroundColor="{DynamicResource BackgroundPrimary}">
+    <Grid RowDefinitions="Auto,*">
+        <controls:AppHeaderView Grid.Row="0"
+                                Title="{Binding PlatformTitle}"
+                                ShowTitle="True" />
+
+        <Grid Grid.Row="1"
+              RowDefinitions="Auto,Auto,Auto,Auto,*"
+              Padding="16"
+              RowSpacing="10">
+            <Label Text="{Binding PlatformTitle}"
+                   Style="{StaticResource SectionTitleStyle}" />
+
+        <Label Grid.Row="1"
+               Text="{Binding Instructions}"
+               Style="{StaticResource SectionSubtitleStyle}"
+               LineBreakMode="WordWrap" />
+
+        <Border Grid.Row="2"
+                Padding="10"
+                MinimumHeightRequest="44"
+                BackgroundColor="{DynamicResource BackgroundSecondary}"
+                Stroke="{DynamicResource Divider}"
+                StrokeThickness="1">
+            <Border.StrokeShape>
+                <RoundRectangle CornerRadius="10" />
+            </Border.StrokeShape>
+            <VerticalStackLayout Spacing="6">
+                <ActivityIndicator IsRunning="{Binding IsBusy}"
+                                   IsVisible="{Binding IsBusy}"
+                                   Color="{DynamicResource AccentPrimary}"
+                                   HorizontalOptions="Start" />
+                <Label Text="{Binding StatusMessage}"
+                       TextColor="{StaticResource Danger}"
+                       FontSize="13"
+                       LineBreakMode="WordWrap"
+                       IsVisible="{Binding StatusMessage, Converter={StaticResource StringNotEmpty}}" />
+                <Label Text="Войдите в аккаунт в окне ниже, затем нажмите «Готово»."
+                       TextColor="{DynamicResource TextMuted}"
+                       FontSize="12" />
+            </VerticalStackLayout>
+        </Border>
+
+        <Grid Grid.Row="3" ColumnDefinitions="*,*" ColumnSpacing="10">
+            <Button Text="Отмена"
+                    Style="{StaticResource SecondaryButtonStyle}"
+                    Command="{Binding CancelCommand}"
+                    IsEnabled="{Binding IsBusy, Converter={StaticResource InvertedBoolConverter}}" />
+            <Button Grid.Column="1"
+                    Text="Готово"
+                    Style="{StaticResource PrimaryButtonStyle}"
+                    Command="{Binding CompleteCommand}"
+                    IsEnabled="{Binding IsBusy, Converter={StaticResource InvertedBoolConverter}}" />
+        </Grid>
+
+            <WebView x:Name="Browser"
+                     Grid.Row="4"
+                     Source="{Binding LoginUrl}"
+                     MinimumHeightRequest="320" />
+        </Grid>
+    </Grid>
+</ContentPage>

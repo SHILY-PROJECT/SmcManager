@@ -1,0 +1,338 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:SmcManager.Maui.ViewModels"
+             xmlns:models="clr-namespace:SmcManager.Maui.Models"
+             xmlns:controls="clr-namespace:SmcManager.Maui.Views.Controls"
+             xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+             x:Class="SmcManager.Maui.Views.SettingsPage"
+             x:DataType="vm:SettingsViewModel"
+             Shell.NavBarIsVisible="False"
+             Title="Настройки"
+             BackgroundColor="{DynamicResource BackgroundPrimary}">
+    <Grid RowDefinitions="Auto,*">
+        <controls:AppHeaderView Grid.Row="0"
+                                Title="Настройки"
+                                ShowTitle="True" />
+        <ScrollView Grid.Row="1">
+            <VerticalStackLayout Padding="20" Spacing="14">
+
+                <toolkit:Expander IsExpanded="{Binding IsAppearanceSectionExpanded}">
+                    <toolkit:Expander.Header>
+                        <controls:SettingsSectionHeaderView Icon="🎨"
+                                                            Title="Оформление" />
+                    </toolkit:Expander.Header>
+                    <Border Style="{StaticResource CardBorderStyle}" Margin="0,8,0,0">
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" Padding="4">
+                            <VerticalStackLayout VerticalOptions="Center">
+                                <Label Text="Тёмная тема"
+                                       TextColor="{DynamicResource TextPrimary}"
+                                       FontSize="16" />
+                                <Label Text="По умолчанию — светлая"
+                                       Style="{StaticResource SectionSubtitleStyle}" />
+                            </VerticalStackLayout>
+                            <Switch Grid.Column="1"
+                                    IsToggled="{Binding IsDarkTheme}"
+                                    OnColor="{DynamicResource AccentPrimary}"
+                                    VerticalOptions="Center" />
+                        </Grid>
+                    </Border>
+                </toolkit:Expander>
+
+                <toolkit:Expander IsExpanded="{Binding IsStorageSectionExpanded}">
+                    <toolkit:Expander.Header>
+                        <controls:SettingsSectionHeaderView Icon="💾"
+                                                            Title="Хранение данных" />
+                    </toolkit:Expander.Header>
+                    <Border Style="{StaticResource CardBorderStyle}" Margin="0,8,0,0">
+                        <VerticalStackLayout Spacing="12" Padding="4">
+                            <Label Text="Где хранить базу и скачанные файлы"
+                                   Style="{StaticResource SectionSubtitleStyle}" />
+                            <Label Text="{Binding CurrentDataRootDisplay}"
+                                   TextColor="{DynamicResource TextPrimary}"
+                                   FontSize="13"
+                                   LineBreakMode="WordWrap" />
+                            <Label Text="Расположение"
+                                   Style="{StaticResource SectionSubtitleStyle}" />
+                            <Border Style="{StaticResource InputBorderStyle}">
+                                <Picker ItemsSource="{Binding StorageLocationOptions}"
+                                        ItemDisplayBinding="{Binding Title}"
+                                        SelectedItem="{Binding SelectedStorageOption}"
+                                        BackgroundColor="Transparent" />
+                            </Border>
+                            <Label Text="{Binding SelectedStorageOption.Description}"
+                                   Style="{StaticResource SectionSubtitleStyle}"
+                                   LineBreakMode="WordWrap" />
+                            <Label Text="{Binding PortableDataPathPreview, StringFormat='Портативный путь: {0}'}"
+                                   Style="{StaticResource SectionSubtitleStyle}"
+                                   FontSize="12"
+                                   LineBreakMode="WordWrap" />
+                            <Label Text="После смены расположения перезапустите приложение. Существующие файлы автоматически не переносятся."
+                                   TextColor="{DynamicResource TextMuted}"
+                                   FontSize="12"
+                                   LineBreakMode="WordWrap" />
+                            <Button Text="Сохранить расположение"
+                                    Style="{StaticResource SecondaryButtonStyle}"
+                                    Command="{Binding SaveStorageSettingsCommand}" />
+                        </VerticalStackLayout>
+                    </Border>
+                </toolkit:Expander>
+
+                <toolkit:Expander IsExpanded="{Binding IsDownloadSectionExpanded}">
+                    <toolkit:Expander.Header>
+                        <controls:SettingsSectionHeaderView Icon="⬇️"
+                                                            Title="Скачивание" />
+                    </toolkit:Expander.Header>
+                    <Border Style="{StaticResource CardBorderStyle}" Margin="0,8,0,0">
+                        <VerticalStackLayout Spacing="12" Padding="4">
+                            <Label Text="Сколько последних постов показывать на вкладке «Скачать»."
+                                   Style="{StaticResource SectionSubtitleStyle}" />
+                            <Border Style="{StaticResource InputBorderStyle}">
+                                <Picker ItemsSource="{Binding RecentCountOptions}"
+                                        SelectedItem="{Binding SelectedRecentCount}"
+                                        BackgroundColor="Transparent" />
+                            </Border>
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                <VerticalStackLayout VerticalOptions="Center">
+                                    <Label Text="Дата публикации в пути папки"
+                                           TextColor="{DynamicResource TextPrimary}" />
+                                    <Label Text="Если выкл. — используется дата скачивания"
+                                           Style="{StaticResource SectionSubtitleStyle}" />
+                                </VerticalStackLayout>
+                                <Switch Grid.Column="1"
+                                        IsToggled="{Binding UsePostedDateForFolder}"
+                                        OnColor="{DynamicResource AccentPrimary}"
+                                        VerticalOptions="Center" />
+                            </Grid>
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                <VerticalStackLayout VerticalOptions="Center">
+                                    <Label Text="Без аккаунта по умолчанию"
+                                           TextColor="{DynamicResource TextPrimary}" />
+                                    <Label Text="На вкладке «Скачать» не подставлять cookies, пока не выберете аккаунт"
+                                           Style="{StaticResource SectionSubtitleStyle}" />
+                                </VerticalStackLayout>
+                                <Switch Grid.Column="1"
+                                        IsToggled="{Binding PreferDownloadWithoutAccount}"
+                                        OnColor="{DynamicResource AccentPrimary}"
+                                        VerticalOptions="Center" />
+                            </Grid>
+                            <Button Text="Сохранить настройки скачивания"
+                                    Style="{StaticResource SecondaryButtonStyle}"
+                                    Command="{Binding SaveAppSettingsCommand}" />
+                        </VerticalStackLayout>
+                    </Border>
+                </toolkit:Expander>
+
+                <toolkit:Expander IsExpanded="{Binding IsAccountsSectionExpanded}">
+                    <toolkit:Expander.Header>
+                        <controls:SettingsSectionHeaderView Icon="👥"
+                                                            Title="Аккаунты соцсетей" />
+                    </toolkit:Expander.Header>
+                    <Border Style="{StaticResource CardBorderStyle}" Margin="0,8,0,0">
+                        <VerticalStackLayout Spacing="12" Padding="4">
+                            <Label Text="Публичный контент скачивается без входа. Для закрытых постов войдите через браузер или вставьте cookies вручную."
+                                   Style="{StaticResource SectionSubtitleStyle}"
+                                   LineBreakMode="WordWrap" />
+
+                            <CollectionView ItemsSource="{Binding AccountRows}">
+                                <CollectionView.EmptyView>
+                                    <Label Text="Нет подключённых аккаунтов — можно скачивать только публичное."
+                                           TextColor="{DynamicResource TextMuted}"
+                                           FontSize="13"
+                                           LineBreakMode="WordWrap" />
+                                </CollectionView.EmptyView>
+                                <CollectionView.ItemTemplate>
+                                    <DataTemplate x:DataType="models:SocialAccountRowViewModel">
+                                        <Border Style="{StaticResource InputBorderStyle}" Margin="0,0,0,10">
+                                            <Grid Padding="12"
+                                                  RowDefinitions="Auto,Auto,Auto"
+                                                  ColumnDefinitions="*,Auto"
+                                                  RowSpacing="10"
+                                                  ColumnSpacing="12">
+                                                <VerticalStackLayout Grid.Row="0"
+                                                                     Grid.ColumnSpan="2"
+                                                                     Spacing="4">
+                                                    <HorizontalStackLayout Spacing="8">
+                                                        <Label Text="{Binding Title}"
+                                                               Style="{StaticResource EmojiCapableLabelStyle}"
+                                                               TextColor="{DynamicResource TextPrimary}"
+                                                               FontAttributes="Bold"
+                                                               VerticalOptions="Center" />
+                                                        <HorizontalStackLayout Spacing="4"
+                                                                               VerticalOptions="Center">
+                                                            <Image Source="{Binding PlatformIcon}"
+                                                                   WidthRequest="18"
+                                                                   HeightRequest="18"
+                                                                   Aspect="AspectFit"
+                                                                   VerticalOptions="Center" />
+                                                            <Label Text="{Binding Nickname}"
+                                                                   IsVisible="{Binding HasNickname}"
+                                                                   TextColor="{DynamicResource TextSecondary}"
+                                                                   FontSize="14"
+                                                                   VerticalOptions="Center" />
+                                                        </HorizontalStackLayout>
+                                                    </HorizontalStackLayout>
+                                                    <Label Text="{Binding Subtitle}"
+                                                           TextColor="{DynamicResource TextMuted}"
+                                                           FontSize="12" />
+                                                </VerticalStackLayout>
+
+                                                <Label Grid.Row="1"
+                                                       Grid.Column="0"
+                                                       Text="Для скачивания"
+                                                       TextColor="{DynamicResource TextPrimary}"
+                                                       FontSize="14"
+                                                       VerticalOptions="Center" />
+                                                <Switch Grid.Row="1"
+                                                        Grid.Column="1"
+                                                        IsToggled="{Binding IsActive}"
+                                                        OnColor="{DynamicResource AccentPrimary}"
+                                                        VerticalOptions="Center" />
+
+                                                <Button Grid.Row="2"
+                                                        Grid.Column="0"
+                                                        Text="По умолчанию"
+                                                        Style="{StaticResource SecondaryButtonStyle}"
+                                                        HorizontalOptions="Start"
+                                                        IsVisible="{Binding IsDefault, Converter={StaticResource InvertedBoolConverter}}"
+                                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:SettingsViewModel}}, Path=SetDefaultAccountCommand}"
+                                                        CommandParameter="{Binding .}" />
+                                                <ImageButton Grid.Row="2"
+                                                             Grid.Column="1"
+                                                             Style="{StaticResource IconActionButtonStyle}"
+                                                             Source="{DynamicResource DeleteIcon}"
+                                                             VerticalOptions="End"
+                                                             HorizontalOptions="End"
+                                                             Command="{Binding Source={RelativeSource AncestorType={x:Type vm:SettingsViewModel}}, Path=DeleteAccountCommand}"
+                                                             CommandParameter="{Binding .}"
+                                                             SemanticProperties.Description="Удалить аккаунт" />
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </CollectionView.ItemTemplate>
+                            </CollectionView>
+
+                            <Button Text="{Binding AddAccountPanelToggleText}"
+                                    Style="{StaticResource SecondaryButtonStyle}"
+                                    Command="{Binding ToggleAddAccountPanelCommand}" />
+
+                            <VerticalStackLayout Spacing="12"
+                                                 IsVisible="{Binding IsAddAccountPanelVisible}">
+                                <Label Text="Платформа"
+                                       Style="{StaticResource SectionSubtitleStyle}" />
+                                <Border Style="{StaticResource InputBorderStyle}">
+                                    <Picker ItemsSource="{Binding PlatformOptions}"
+                                            SelectedItem="{Binding SelectedPlatformOption}"
+                                            Title="Выберите сеть"
+                                            BackgroundColor="Transparent" />
+                                </Border>
+
+                                <Button Text="Войти через браузер"
+                                        Style="{StaticResource PrimaryButtonStyle}"
+                                        Command="{Binding LoginWithBrowserCommand}"
+                                        IsEnabled="{Binding IsValidatingAccount, Converter={StaticResource InvertedBoolConverter}}" />
+
+                                <Label Text="или вставьте cookies вручную"
+                                       TextColor="{DynamicResource TextMuted}"
+                                       FontSize="12"
+                                       HorizontalOptions="Center" />
+
+                                <Border Style="{StaticResource InputBorderStyle}">
+                                    <Entry Text="{Binding NewAccountDisplayName}"
+                                           Placeholder="Название (например: Мой Instagram)"
+                                           Style="{StaticResource EmojiCapableEntryStyle}"
+                                           TextColor="{DynamicResource TextPrimary}"
+                                           PlaceholderColor="{DynamicResource TextMuted}" />
+                                </Border>
+                                <Border Style="{StaticResource InputBorderStyle}">
+                                    <Entry Text="{Binding NewAccountUsername}"
+                                           Placeholder="@username (необязательно)"
+                                           TextColor="{DynamicResource TextPrimary}"
+                                           PlaceholderColor="{DynamicResource TextMuted}" />
+                                </Border>
+
+                                <Label Text="{Binding AccountAuthHint}"
+                                       TextColor="{DynamicResource TextSecondary}"
+                                       FontSize="12"
+                                       LineBreakMode="WordWrap" />
+
+                                <Label Text="Cookies (необязательно)"
+                                       TextColor="{DynamicResource TextPrimary}"
+                                       FontSize="14" />
+
+                                <Border Style="{StaticResource InputBorderStyle}">
+                                    <Editor Text="{Binding NewAccountAuth}"
+                                            Placeholder="{Binding AccountAuthPlaceholder}"
+                                            AutoSize="TextChanges"
+                                            MinimumHeightRequest="80"
+                                            TextColor="{DynamicResource TextPrimary}"
+                                            PlaceholderColor="{DynamicResource TextMuted}" />
+                                </Border>
+
+                                <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                                    <Button Text="Вставить из буфера"
+                                            Style="{StaticResource SecondaryButtonStyle}"
+                                            Command="{Binding PasteAuthFromClipboardCommand}" />
+                                    <Button Grid.Column="1"
+                                            Text="Сохранить аккаунт"
+                                            Style="{StaticResource PrimaryButtonStyle}"
+                                            Command="{Binding AddAccountCommand}"
+                                            IsEnabled="{Binding IsValidatingAccount, Converter={StaticResource InvertedBoolConverter}}" />
+                                </Grid>
+
+                                <ActivityIndicator IsRunning="{Binding IsValidatingAccount}"
+                                                   IsVisible="{Binding IsValidatingAccount}"
+                                                   Color="{DynamicResource AccentPrimary}" />
+
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                    <Label Text="Использовать по умолчанию для этой сети"
+                                           TextColor="{DynamicResource TextPrimary}"
+                                           VerticalOptions="Center" />
+                                    <Switch Grid.Column="1"
+                                            IsToggled="{Binding NewAccountIsDefault}"
+                                            OnColor="{DynamicResource AccentPrimary}"
+                                            VerticalOptions="Center" />
+                                </Grid>
+                            </VerticalStackLayout>
+                        </VerticalStackLayout>
+                    </Border>
+                </toolkit:Expander>
+
+                <toolkit:Expander IsExpanded="{Binding IsProxySectionExpanded}">
+                    <toolkit:Expander.Header>
+                        <controls:SettingsSectionHeaderView Icon="🌐"
+                                                            Title="Прокси" />
+                    </toolkit:Expander.Header>
+                    <Border Style="{StaticResource CardBorderStyle}" Margin="0,8,0,0">
+                        <VerticalStackLayout Spacing="12" Padding="4">
+                            <Label Text="Можно не заполнять — скачивание работает без прокси."
+                                   Style="{StaticResource SectionSubtitleStyle}" />
+                            <Switch IsToggled="{Binding ProxyEnabled}"
+                                    OnColor="{DynamicResource AccentPrimary}" />
+                            <Border Style="{StaticResource InputBorderStyle}">
+                                <Entry Text="{Binding ProxyHost}" Placeholder="Хост (если нужен)" />
+                            </Border>
+                            <Border Style="{StaticResource InputBorderStyle}">
+                                <Entry Text="{Binding ProxyPortText}" Placeholder="Порт" Keyboard="Numeric" />
+                            </Border>
+                            <Border Style="{StaticResource InputBorderStyle}">
+                                <Entry Text="{Binding ProxyUsername}" Placeholder="Логин (опционально)" />
+                            </Border>
+                            <Border Style="{StaticResource InputBorderStyle}">
+                                <Entry Text="{Binding ProxyPassword}" Placeholder="Пароль (опционально)" IsPassword="True" />
+                            </Border>
+                            <Button Text="Сохранить прокси"
+                                    Style="{StaticResource PrimaryButtonStyle}"
+                                    Command="{Binding SaveProxyCommand}" />
+                        </VerticalStackLayout>
+                    </Border>
+                </toolkit:Expander>
+
+                <Label Text="{Binding StatusMessage}"
+                       TextColor="{DynamicResource AccentSecondary}"
+                       LineBreakMode="WordWrap"
+                       Margin="0,4,0,8" />
+            </VerticalStackLayout>
+        </ScrollView>
+    </Grid>
+</ContentPage>

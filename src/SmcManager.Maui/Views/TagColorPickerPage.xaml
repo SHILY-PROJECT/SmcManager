@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:SmcManager.Maui.ViewModels"
+             xmlns:controls="clr-namespace:SmcManager.Maui.Views.Controls"
+             xmlns:sys="clr-namespace:System;assembly=System.Runtime"
+             x:Class="SmcManager.Maui.Views.TagColorPickerPage"
+             x:DataType="vm:TagColorPickerViewModel"
+             Shell.NavBarIsVisible="False"
+             Title="Цвет тега"
+             BackgroundColor="{DynamicResource BackgroundPrimary}">
+    <Grid RowDefinitions="Auto,*,Auto">
+        <controls:AppHeaderView Grid.Row="0"
+                                Title="Цвет тега"
+                                ShowTitle="True" />
+        <ScrollView Grid.Row="1">
+            <VerticalStackLayout Padding="20" Spacing="16">
+                <Border Style="{StaticResource CardBorderStyle}">
+                    <Grid ColumnDefinitions="Auto,*"
+                          ColumnSpacing="12"
+                          Padding="4">
+                        <Border WidthRequest="56"
+                                HeightRequest="56"
+                                Stroke="{DynamicResource Divider}"
+                                StrokeThickness="1"
+                                BackgroundColor="{Binding PreviewColor}"
+                                VerticalOptions="Center">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="12" />
+                            </Border.StrokeShape>
+                        </Border>
+                        <VerticalStackLayout Grid.Column="1"
+                                             Spacing="4"
+                                             VerticalOptions="Center">
+                            <Label Text="Выбранный цвет"
+                                   Style="{StaticResource SectionSubtitleStyle}" />
+                            <Label Text="{Binding SelectedHexDisplay}"
+                                   Style="{StaticResource SectionTitleStyle}"
+                                   FontSize="18" />
+                        </VerticalStackLayout>
+                    </Grid>
+                </Border>
+
+                <Label Text="Палитра"
+                       Style="{StaticResource SectionTitleStyle}"
+                       FontSize="17" />
+                <CollectionView ItemsSource="{Binding Palette}"
+                                HeightRequest="220"
+                                SelectionMode="None">
+                    <CollectionView.ItemsLayout>
+                        <GridItemsLayout Orientation="Vertical"
+                                         Span="8"
+                                         HorizontalItemSpacing="6"
+                                         VerticalItemSpacing="6" />
+                    </CollectionView.ItemsLayout>
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate x:DataType="sys:String">
+                            <Border WidthRequest="30"
+                                    HeightRequest="30"
+                                    Stroke="{DynamicResource Divider}"
+                                    StrokeThickness="1"
+                                    BackgroundColor="{Binding ., Converter={StaticResource HexToColorConverter}}">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="8" />
+                                </Border.StrokeShape>
+                                <Border.GestureRecognizers>
+                                    <TapGestureRecognizer
+                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:TagColorPickerViewModel}}, Path=SelectPaletteColorCommand}"
+                                        CommandParameter="{Binding .}" />
+                                </Border.GestureRecognizers>
+                            </Border>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+
+                <Label Text="Свой оттенок"
+                       Style="{StaticResource SectionTitleStyle}"
+                       FontSize="17" />
+                <Border Style="{StaticResource CardBorderStyle}">
+                    <VerticalStackLayout Spacing="10" Padding="4">
+                        <Label Text="Оттенок"
+                               Style="{StaticResource SectionSubtitleStyle}" />
+                        <Slider Minimum="0"
+                                Maximum="360"
+                                Value="{Binding Hue}" />
+                        <Label Text="Насыщенность"
+                               Style="{StaticResource SectionSubtitleStyle}" />
+                        <Slider Minimum="0"
+                                Maximum="100"
+                                Value="{Binding Saturation}" />
+                        <Label Text="Яркость"
+                               Style="{StaticResource SectionSubtitleStyle}" />
+                        <Slider Minimum="0"
+                                Maximum="100"
+                                Value="{Binding Lightness}" />
+                    </VerticalStackLayout>
+                </Border>
+            </VerticalStackLayout>
+        </ScrollView>
+
+        <Grid Grid.Row="2"
+              Padding="20,0,20,20"
+              ColumnDefinitions="*,*"
+              ColumnSpacing="12">
+            <Button Text="Отмена"
+                    Style="{StaticResource SecondaryButtonStyle}"
+                    Command="{Binding CancelAsyncCommand}" />
+            <Button Grid.Column="1"
+                    Text="Готово"
+                    Style="{StaticResource PrimaryButtonStyle}"
+                    Command="{Binding ConfirmAsyncCommand}" />
+        </Grid>
+    </Grid>
+</ContentPage>
