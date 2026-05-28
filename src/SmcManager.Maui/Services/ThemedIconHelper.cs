@@ -39,12 +39,14 @@ public static class ThemedIconHelper
     public static void ApplyCarouselIcons(
         ImageButton? prevButton,
         ImageButton? nextButton,
-        ImageButton? mediaExpandButton,
+        Button? mediaExpandButton,
         bool isMediaExpanded,
         ThemePalette palette)
     {
         SetSource(prevButton, palette.CarouselPrevIcon);
         SetSource(nextButton, palette.CarouselNextIcon);
-        SetSource(mediaExpandButton, isMediaExpanded ? palette.MediaCollapseIcon : palette.MediaExpandIcon);
+        SetImageSource(
+            mediaExpandButton,
+            isMediaExpanded ? palette.MediaCollapseIcon : palette.MediaExpandIcon);
     }
 }

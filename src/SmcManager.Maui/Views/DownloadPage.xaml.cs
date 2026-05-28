@@ -41,6 +41,6 @@ public partial class DownloadPage : ContentPage, IRecipient<ThemeChangedMessage>
                 ? AppColorTheme.Dark
                 : AppColorTheme.Light);
 
-        ThemedIconHelper.SetSource(DismissPreviewButton, palette.DeleteIcon);
+        ThemedIconHelper.SetImageSource(DismissPreviewButton, palette.DeleteIcon);
     }
 }

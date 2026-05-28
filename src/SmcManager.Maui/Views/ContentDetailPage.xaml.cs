@@ -91,7 +91,7 @@ public partial class ContentDetailPage : ContentPage, IRecipient<ThemeChangedMes
             palette);
         ThemedIconHelper.SetSource(EditCaptionButton, palette.EditCaptionIcon);
         ThemedIconHelper.SetSource(EditCommentButton, palette.EditCaptionIcon);
-        ThemedIconHelper.SetSource(DeleteContentButton, palette.DeleteIcon);
+        ThemedIconHelper.SetImageSource(DeleteContentButton, palette.DeleteIcon);
         ThemedIconHelper.SetImageSource(OpenInExplorerButton, palette.ExplorerIcon);
         ThemedIconHelper.SetImageSource(OpenFolderButton, palette.FolderIcon);
         ThemedIconHelper.SetImageSource(OpenSourceButton, palette.OpenSourceIcon);

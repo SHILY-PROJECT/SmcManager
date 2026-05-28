@@ -238,12 +238,12 @@
                 IsVisible="{Binding IsContentLoaded}">
             <Grid ColumnDefinitions="Auto,*,Auto"
                   ColumnSpacing="8">
-                <ImageButton x:Name="DeleteContentButton"
-                             Grid.Column="0"
-                             Style="{StaticResource HeaderIconButtonStyle}"
-                             HorizontalOptions="Start"
-                             Command="{Binding DeleteContentCommand}"
-                             SemanticProperties.Description="Удалить контент" />
+                <Button x:Name="DeleteContentButton"
+                        Grid.Column="0"
+                        Style="{StaticResource SecondaryIconButtonStyle}"
+                        HorizontalOptions="Start"
+                        Command="{Binding DeleteContentCommand}"
+                        SemanticProperties.Description="Удалить контент" />
 
                 <HorizontalStackLayout Grid.Column="1"
                                        Spacing="10"
@@ -264,13 +264,13 @@
                             SemanticProperties.Description="Открыть в соцсети" />
                 </HorizontalStackLayout>
 
-                <ImageButton x:Name="MediaExpandButton"
-                             Grid.Column="2"
-                             Style="{StaticResource HeaderIconButtonStyle}"
-                             HorizontalOptions="End"
-                             IsVisible="{Binding HasMediaSlides}"
-                             Command="{Binding ToggleMediaExpandCommand}"
-                             SemanticProperties.Description="Изменить размер области медиа" />
+                <Button x:Name="MediaExpandButton"
+                        Grid.Column="2"
+                        Style="{StaticResource SecondaryIconButtonStyle}"
+                        HorizontalOptions="End"
+                        IsVisible="{Binding HasMediaSlides}"
+                        Command="{Binding ToggleMediaExpandCommand}"
+                        SemanticProperties.Description="Изменить размер области медиа" />
             </Grid>
         </Border>
     </Grid>

@@ -20,28 +20,28 @@
                 <Label Text="Ссылка на контент"
                        Style="{StaticResource SectionTitleStyle}" />
 
-                <Grid ColumnDefinitions="*,Auto"
+                <Grid ColumnDefinitions="*,Auto,Auto"
                       ColumnSpacing="8">
                     <Border Grid.Column="0"
                             Style="{StaticResource InputBorderStyle}">
-                        <Grid ColumnDefinitions="*,Auto">
-                            <Entry Grid.Column="0"
-                                   Text="{Binding Url}"
-                                   Placeholder="Instagram, YouTube или VK..."
-                                   Style="{StaticResource EmojiCapableEntryStyle}"
-                                   TextColor="{DynamicResource TextPrimary}"
-                                   PlaceholderColor="{DynamicResource TextMuted}"
-                                   Margin="4,0,0,0" />
-                            <Button Grid.Column="1"
-                                    Text="×"
-                                    Style="{StaticResource ClearUrlCircleButtonStyle}"
-                                    Margin="0,0,6,0"
-                                    IsVisible="{Binding HasUrl}"
-                                    Command="{Binding ClearUrlCommand}"
-                                    SemanticProperties.Description="Очистить ссылку" />
-                        </Grid>
+                        <Entry Text="{Binding Url}"
+                               Placeholder="Instagram, YouTube или VK..."
+                               Style="{StaticResource EmojiCapableEntryStyle}"
+                               TextColor="{DynamicResource TextPrimary}"
+                               PlaceholderColor="{DynamicResource TextMuted}"
+                               Margin="12,0,12,0"
+                               VerticalOptions="Center" />
                     </Border>
                     <Button Grid.Column="1"
+                            Text="×"
+                            Style="{StaticResource SecondaryIconButtonStyle}"
+                            FontSize="22"
+                            TextColor="{DynamicResource TextPrimary}"
+                            VerticalOptions="Center"
+                            IsVisible="{Binding HasUrl}"
+                            Command="{Binding ClearUrlCommand}"
+                            SemanticProperties.Description="Очистить ссылку" />
+                    <Button Grid.Column="2"
                             Style="{StaticResource DownloadIconButtonStyle}"
                             VerticalOptions="Center"
                             ImageSource="{DynamicResource PasteIcon}"
@@ -181,11 +181,16 @@
                                                            Spacing="8"
                                                            HorizontalOptions="End"
                                                            VerticalOptions="End">
-                                        <ImageButton x:Name="DismissPreviewButton"
-                                                     Style="{StaticResource HeaderIconButtonStyle}"
-                                                     Source="{DynamicResource DeleteIcon}"
-                                                     Command="{Binding DismissPreviewCommand}"
-                                                     SemanticProperties.Description="Закрыть предпросмотр" />
+                                        <Button x:Name="DismissPreviewButton"
+                                                Style="{StaticResource SecondaryIconButtonStyle}"
+                                                WidthRequest="40"
+                                                HeightRequest="40"
+                                                Padding="8"
+                                                MinimumWidthRequest="40"
+                                                MinimumHeightRequest="40"
+                                                ImageSource="{DynamicResource DeleteIcon}"
+                                                Command="{Binding DismissPreviewCommand}"
+                                                SemanticProperties.Description="Закрыть предпросмотр" />
                                         <Button Style="{StaticResource DownloadIconButtonStyle}"
                                                 WidthRequest="40"
                                                 HeightRequest="40"
@@ -193,6 +198,7 @@
                                                 MinimumWidthRequest="40"
                                                 MinimumHeightRequest="40"
                                                 ImageSource="{DynamicResource DownloadButtonIcon}"
+                                                IsVisible="{Binding ShowPreviewDownloadButton}"
                                                 Command="{Binding DownloadCommand}"
                                                 SemanticProperties.Description="Скачать" />
                                     </HorizontalStackLayout>

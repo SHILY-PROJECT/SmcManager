@@ -72,8 +72,13 @@ public partial class DownloadViewModel : ObservableObject,
 
     public bool HasUrl => !string.IsNullOrWhiteSpace(Url);
 
+    public bool ShowPreviewDownloadButton =>
+        ShowLinkPreview && !IsLoadingLinkMetadata;
+
     public bool ShowFallbackDownloadButton =>
-        !ShowLinkPreview && !string.IsNullOrWhiteSpace(ResolveActiveDownloadUrl());
+        !ShowLinkPreview
+        && !IsLoadingLinkMetadata
+        && !string.IsNullOrWhiteSpace(ResolveActiveDownloadUrl());
 
     [ObservableProperty]
     private string _url = string.Empty;
@@ -128,15 +133,21 @@ public partial class DownloadViewModel : ObservableObject,
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsLoadingLinkMetadata))]
+    [NotifyPropertyChangedFor(nameof(ShowPreviewDownloadButton))]
+    [NotifyPropertyChangedFor(nameof(ShowFallbackDownloadButton))]
     private bool _isLoadingQualities;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsLoadingLinkMetadata))]
+    [NotifyPropertyChangedFor(nameof(ShowPreviewDownloadButton))]
+    [NotifyPropertyChangedFor(nameof(ShowFallbackDownloadButton))]
     private bool _isLoadingPreview;
 
     public bool IsLoadingLinkMetadata => IsLoadingPreview || IsLoadingQualities;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowPreviewDownloadButton))]
+    [NotifyPropertyChangedFor(nameof(ShowFallbackDownloadButton))]
     private bool _showLinkPreview;
 
     [ObservableProperty]
@@ -213,6 +224,7 @@ public partial class DownloadViewModel : ObservableObject,
     {
         UpdatePreviewAccountStatus();
         OnPropertyChanged(nameof(ShowPreviewAccountStatus));
+        OnPropertyChanged(nameof(ShowPreviewDownloadButton));
         OnPropertyChanged(nameof(ShowFallbackDownloadButton));
     }
 
