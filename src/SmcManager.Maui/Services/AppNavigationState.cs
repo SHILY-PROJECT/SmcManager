@@ -18,7 +18,8 @@ public static class AppNavigationState
             return;
 
         IsSettingsVisible = visible;
-        WeakReferenceMessenger.Default.Send(new AppHeaderModeChangedMessage(visible));
+        shell.Dispatcher.Dispatch(() =>
+            WeakReferenceMessenger.Default.Send(new AppHeaderModeChangedMessage(visible)));
     }
 
     private static bool ResolveSettingsVisible(Shell shell)

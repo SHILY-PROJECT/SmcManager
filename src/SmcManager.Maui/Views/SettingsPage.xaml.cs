@@ -1,4 +1,3 @@
-using SmcManager.Maui.Services;
 using SmcManager.Maui.ViewModels;
 
 namespace SmcManager.Maui.Views;
@@ -17,18 +16,7 @@ public partial class SettingsPage : ContentPage
     protected override void OnAppearing()
     {
         base.OnAppearing();
-        if (Shell.Current is Shell shell)
-            AppNavigationState.Update(shell);
-
         if (BindingContext is SettingsViewModel vm && vm.AppearingCommand.CanExecute(null))
             vm.AppearingCommand.Execute(null);
-    }
-
-    protected override void OnDisappearing()
-    {
-        if (Shell.Current is Shell shell)
-            AppNavigationState.Update(shell);
-
-        base.OnDisappearing();
     }
 }

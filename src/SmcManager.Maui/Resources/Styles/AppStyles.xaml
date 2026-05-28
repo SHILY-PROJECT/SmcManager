@@ -2,7 +2,7 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
                     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
 
-    <!-- .NET 10: ContentPage по умолчанию edge-to-edge; на Android шапка уезжает под статус-бар -->
+    <!-- .NET 10: ContentPage по умолчанию edge-to-edge; на Android шапка иногда уезжает под статус-бар при Shell-навигации -->
     <Style TargetType="ContentPage">
         <Setter Property="SafeAreaEdges" Value="Container" />
     </Style>

@@ -34,8 +34,11 @@ public partial class AppShell : Shell, IRecipient<ThemeChangedMessage>
         Navigated += OnShellNavigated;
     }
 
-    private void OnShellNavigated(object? sender, ShellNavigatedEventArgs e) =>
+    private void OnShellNavigated(object? sender, ShellNavigatedEventArgs e)
+    {
         AppNavigationState.Update(this);
+        PageSafeAreaHelper.EnsureApplied(CurrentPage);
+    }
 
     protected override bool OnBackButtonPressed()
     {

@@ -75,14 +75,27 @@ public partial class AppHeaderView : ContentView,
         ApplyIcons(_lastPalette ?? ThemePalette.For(GetCurrentTheme()));
     }
 
-    public void Receive(ThemeChangedMessage message) =>
-        ApplyIcons(message.Palette);
+    public void Receive(ThemeChangedMessage message)
+    {
+        if (Parent is null || Handler is null || SettingsButton.Handler is null)
+            return;
 
-    public void Receive(AppHeaderModeChangedMessage message) =>
-        RefreshHeaderActionMode();
+        ApplyIcons(message.Palette);
+    }
+
+    public void Receive(AppHeaderModeChangedMessage message)
+    {
+        if (!IsHeaderOnCurrentPage())
+            return;
+
+        Dispatcher.Dispatch(RefreshHeaderActionMode);
+    }
 
     private void RefreshHeaderActionMode()
     {
+        if (!CanUpdateChrome())
+            return;
+
         var backMode = AppNavigationState.IsSettingsVisible;
         if (_isBackMode == backMode)
             return;
@@ -94,6 +107,33 @@ public partial class AppHeaderView : ContentView,
 
         if (_lastPalette is not null)
             ApplyIcons(_lastPalette);
+    }
+
+    private bool CanUpdateChrome() =>
+        Parent is not null &&
+        Window is not null &&
+        Handler is not null &&
+        SettingsButton.Handler is not null &&
+        IsHeaderOnCurrentPage();
+
+    private bool IsHeaderOnCurrentPage()
+    {
+        var hostPage = FindHostPage();
+        if (hostPage is null || Shell.Current?.CurrentPage is not Page currentPage)
+            return false;
+
+        return ReferenceEquals(hostPage, currentPage);
+    }
+
+    private Page? FindHostPage()
+    {
+        for (var parent = Parent; parent is not null; parent = parent.Parent)
+        {
+            if (parent is Page page)
+                return page;
+        }
+
+        return null;
     }
 
     private void ApplyIcons(ThemePalette palette)

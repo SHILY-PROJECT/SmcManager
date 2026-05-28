@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using SmcManager.Infrastructure;
 using SmcManager.Infrastructure.Services;
+using SmcManager.Maui.Behaviors;
 using SmcManager.Maui.Services;
 using SmcManager.Maui.ViewModels;
 using SmcManager.Maui.Views;
@@ -30,6 +31,17 @@ public static class MauiProgram
             })
             .ConfigureMauiHandlers(handlers =>
             {
+                Microsoft.Maui.Handlers.PageHandler.Mapper.AppendToMapping(
+                    "SafeAreaRefreshBehavior",
+                    (handler, view) =>
+                    {
+                        if (view is ContentPage page
+                            && page.Behaviors.All(b => b is not SafeAreaRefreshBehavior))
+                        {
+                            page.Behaviors.Add(new SafeAreaRefreshBehavior());
+                        }
+                    });
+
 #if ANDROID
                 Microsoft.Maui.Handlers.LabelHandler.Mapper.AppendToMapping(
                     "DisableAutoLink",

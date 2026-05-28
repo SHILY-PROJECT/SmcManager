@@ -3,6 +3,7 @@ using Android.Content;
 using Android.Content.PM;
 using Android.OS;
 using AndroidX.Activity;
+using AndroidX.Core.View;
 using SmcManager.Maui.Services;
 
 namespace SmcManager.Maui;
@@ -20,6 +21,12 @@ public class MainActivity : MauiAppCompatActivity
     protected override void OnCreate(Bundle? savedInstanceState)
     {
         base.OnCreate(savedInstanceState);
+        if (Window is not null)
+        {
+            // Edge-to-edge + SafeAreaEdges на страницах; единая конфигурация окна снижает «плавающие» сбои отступов.
+            WindowCompat.SetDecorFitsSystemWindows(Window, false);
+        }
+
         OnBackPressedDispatcher.AddCallback(this, new BackNavigationCallback(this));
         HandleShareIntent(Intent);
     }
