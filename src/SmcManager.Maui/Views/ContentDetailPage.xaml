@@ -41,10 +41,12 @@
                             <views:MediaSlideDataTemplateSelector>
                                 <views:MediaSlideDataTemplateSelector.ImageTemplate>
                                     <DataTemplate x:DataType="vm:MediaSlideViewModel">
-                                        <Image Source="{Binding ImageSource}"
-                                               Aspect="AspectFit"
-                                               HorizontalOptions="Fill"
-                                               VerticalOptions="Center" />
+                                        <Grid VerticalOptions="Fill">
+                                            <Image Source="{Binding ImageSource}"
+                                                   Aspect="AspectFit"
+                                                   HorizontalOptions="Fill"
+                                                   VerticalOptions="Start" />
+                                        </Grid>
                                     </DataTemplate>
                                 </views:MediaSlideDataTemplateSelector.ImageTemplate>
                                 <views:MediaSlideDataTemplateSelector.VideoTemplate>

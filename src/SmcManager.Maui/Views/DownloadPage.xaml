@@ -87,8 +87,8 @@
                                  SemanticProperties.Description="Добавить новый тег" />
                 </Grid>
 
-                <ActivityIndicator IsRunning="{Binding IsLoadingPreview}"
-                                   IsVisible="{Binding IsLoadingPreview}"
+                <ActivityIndicator IsRunning="{Binding IsLoadingLinkMetadata}"
+                                   IsVisible="{Binding IsLoadingLinkMetadata}"
                                    Color="{DynamicResource AccentPrimary}"
                                    HorizontalOptions="Start" />
 
@@ -144,71 +144,78 @@
                 <VerticalStackLayout Spacing="5">
                     <Border Style="{StaticResource CardBorderStyle}"
                             IsVisible="{Binding ShowLinkPreview}">
-                        <Grid ColumnDefinitions="88,*"
-                              ColumnSpacing="14"
-                              Padding="4">
-                            <Border WidthRequest="80"
-                                    HeightRequest="80"
-                                    StrokeThickness="0"
-                                    BackgroundColor="{DynamicResource BackgroundSecondary}">
-                                <Border.StrokeShape>
-                                    <RoundRectangle CornerRadius="12" />
-                                </Border.StrokeShape>
-                                <Image Source="{Binding PreviewImageSource}"
-                                       Aspect="AspectFill" />
-                            </Border>
-                            <Grid Grid.Column="1"
-                                  RowDefinitions="Auto,*,Auto">
-                                <Label Grid.Row="0"
-                                       Text="{Binding PreviewAuthor}"
-                                       Style="{StaticResource EmojiCapableLabelStyle}"
-                                       FontAttributes="Bold"
-                                       TextColor="{DynamicResource TextPrimary}"
-                                       FontSize="15"
-                                       LineBreakMode="TailTruncation"
-                                       MaxLines="1" />
-                                <Label Grid.Row="1"
-                                       Text="{Binding PreviewTitle}"
-                                       Style="{StaticResource EmojiCapableLabelStyle}"
-                                       TextColor="{DynamicResource TextSecondary}"
-                                       FontSize="13"
-                                       LineBreakMode="TailTruncation"
-                                       MaxLines="3"
-                                       VerticalOptions="Start"
-                                       Margin="0,4,0,8" />
-                                <Grid Grid.Row="2"
-                                      ColumnDefinitions="*,Auto"
-                                      ColumnSpacing="8">
-                                    <Border Grid.Column="0"
-                                            VerticalOptions="End"
-                                            Padding="8,4"
-                                            BackgroundColor="{DynamicResource BackgroundElevated}"
-                                            Stroke="{DynamicResource Divider}"
-                                            StrokeThickness="1"
-                                            IsVisible="{Binding ShowPreviewAccountStatus}">
-                                        <Border.StrokeShape>
-                                            <RoundRectangle CornerRadius="8" />
-                                        </Border.StrokeShape>
-                                        <Label Text="{Binding PreviewAccountStatus}"
-                                               TextColor="{DynamicResource TextSecondary}"
-                                               FontSize="11"
-                                               LineBreakMode="TailTruncation"
-                                               MaxLines="2" />
-                                    </Border>
-                                    <Button Grid.Column="1"
-                                            Style="{StaticResource DownloadIconButtonStyle}"
-                                            WidthRequest="40"
-                                            HeightRequest="40"
-                                            Padding="8"
-                                            MinimumWidthRequest="40"
-                                            MinimumHeightRequest="40"
-                                            VerticalOptions="End"
-                                            HorizontalOptions="End"
-                                            ImageSource="{DynamicResource DownloadButtonIcon}"
-                                            Command="{Binding DownloadCommand}"
-                                            SemanticProperties.Description="Скачать" />
+                        <Grid Padding="4">
+                            <Grid ColumnDefinitions="88,*"
+                                  ColumnSpacing="14">
+                                <Border WidthRequest="80"
+                                        HeightRequest="80"
+                                        StrokeThickness="0"
+                                        BackgroundColor="{DynamicResource BackgroundSecondary}">
+                                    <Border.StrokeShape>
+                                        <RoundRectangle CornerRadius="12" />
+                                    </Border.StrokeShape>
+                                    <Image Source="{Binding PreviewImageSource}"
+                                           Aspect="AspectFill" />
+                                </Border>
+                                <Grid Grid.Column="1"
+                                      RowDefinitions="Auto,*,Auto">
+                                    <Label Grid.Row="0"
+                                           Text="{Binding PreviewAuthor}"
+                                           Style="{StaticResource EmojiCapableLabelStyle}"
+                                           FontAttributes="Bold"
+                                           TextColor="{DynamicResource TextPrimary}"
+                                           FontSize="15"
+                                           LineBreakMode="TailTruncation"
+                                           MaxLines="1"
+                                           Margin="0,0,8,0" />
+                                    <Label Grid.Row="1"
+                                           Text="{Binding PreviewTitle}"
+                                           Style="{StaticResource EmojiCapableLabelStyle}"
+                                           TextColor="{DynamicResource TextSecondary}"
+                                           FontSize="13"
+                                           LineBreakMode="TailTruncation"
+                                           MaxLines="3"
+                                           VerticalOptions="Start"
+                                           Margin="0,4,0,8" />
+                                    <HorizontalStackLayout Grid.Row="2"
+                                                           Spacing="8"
+                                                           HorizontalOptions="End"
+                                                           VerticalOptions="End">
+                                        <ImageButton x:Name="DismissPreviewButton"
+                                                     Style="{StaticResource HeaderIconButtonStyle}"
+                                                     Source="{DynamicResource DeleteIcon}"
+                                                     Command="{Binding DismissPreviewCommand}"
+                                                     SemanticProperties.Description="Закрыть предпросмотр" />
+                                        <Button Style="{StaticResource DownloadIconButtonStyle}"
+                                                WidthRequest="40"
+                                                HeightRequest="40"
+                                                Padding="8"
+                                                MinimumWidthRequest="40"
+                                                MinimumHeightRequest="40"
+                                                ImageSource="{DynamicResource DownloadButtonIcon}"
+                                                Command="{Binding DownloadCommand}"
+                                                SemanticProperties.Description="Скачать" />
+                                    </HorizontalStackLayout>
                                 </Grid>
                             </Grid>
+                            <Border HorizontalOptions="End"
+                                    VerticalOptions="Start"
+                                    Padding="8,4"
+                                    MaximumWidthRequest="200"
+                                    BackgroundColor="{DynamicResource BackgroundElevated}"
+                                    Stroke="{DynamicResource Divider}"
+                                    StrokeThickness="1"
+                                    IsVisible="{Binding ShowPreviewAccountStatus}">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="8" />
+                                </Border.StrokeShape>
+                                <Label Text="{Binding PreviewAccountStatus}"
+                                       TextColor="{DynamicResource TextSecondary}"
+                                       FontSize="11"
+                                       LineBreakMode="TailTruncation"
+                                       MaxLines="2"
+                                       HorizontalTextAlignment="End" />
+                            </Border>
                         </Grid>
                     </Border>
 
@@ -219,10 +226,6 @@
                             Command="{Binding DownloadCommand}"
                             SemanticProperties.Description="Скачать" />
 
-                    <ActivityIndicator IsRunning="{Binding IsLoadingQualities}"
-                                       IsVisible="{Binding IsLoadingQualities}"
-                                       Color="{DynamicResource AccentPrimary}"
-                                       HorizontalOptions="Start" />
                     <Picker ItemsSource="{Binding QualityOptions}"
                             ItemDisplayBinding="{Binding Label}"
                             SelectedItem="{Binding SelectedQuality}"

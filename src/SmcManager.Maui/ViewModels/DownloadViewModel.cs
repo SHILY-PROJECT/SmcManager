@@ -127,10 +127,14 @@ public partial class DownloadViewModel : ObservableObject,
     private bool _showQualityPicker;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsLoadingLinkMetadata))]
     private bool _isLoadingQualities;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsLoadingLinkMetadata))]
     private bool _isLoadingPreview;
+
+    public bool IsLoadingLinkMetadata => IsLoadingPreview || IsLoadingQualities;
 
     [ObservableProperty]
     private bool _showLinkPreview;
@@ -274,6 +278,17 @@ public partial class DownloadViewModel : ObservableObject,
     {
         _holdDownloadFormClear = false;
         await ClearDownloadInputAsync();
+    }
+
+    [RelayCommand]
+    private async Task DismissPreviewAsync()
+    {
+        _pendingDownloadUrl = null;
+        await MainThread.InvokeOnMainThreadAsync(() =>
+        {
+            ClearLinkMetadataUi();
+            OnPropertyChanged(nameof(ShowFallbackDownloadButton));
+        });
     }
 
     [RelayCommand]
