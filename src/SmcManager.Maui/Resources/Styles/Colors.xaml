@@ -35,7 +35,9 @@
     <x:String x:Key="MenuIcon">menu_dark.png</x:String>
     <x:String x:Key="CarouselPrevIcon">carousel_prev.png</x:String>
     <x:String x:Key="CarouselNextIcon">carousel_next.png</x:String>
-    <x:String x:Key="MediaExpandIcon">media_expand.png</x:String>
-    <x:String x:Key="MediaCollapseIcon">media_collapse.png</x:String>
+    <x:String x:Key="MediaExpandIcon">icon_expand.png</x:String>
+    <x:String x:Key="MediaCollapseIcon">icon_collapse.png</x:String>
+    <x:String x:Key="ExplorerIcon">icon_explorer.png</x:String>
+    <x:String x:Key="FolderIcon">icon_folder.png</x:String>
 
 </ResourceDictionary>

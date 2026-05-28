@@ -43,7 +43,8 @@
         <MauiImage Update="Resources\Images\icon_link.svg" BaseSize="24,24" Resize="True" />
         <MauiImage Update="Resources\Images\icon_share*.svg" BaseSize="24,24" Resize="True" />
         <MauiImage Update="Resources\Images\icon_platform_*.svg" BaseSize="20,20" Resize="True" />
-        <MauiImage Update="Resources\Images\media_*.svg" BaseSize="40,40" Resize="True" />
+        <MauiImage Update="Resources\Images\icon_expand*.svg" BaseSize="24,24" Resize="True" />
+        <MauiImage Update="Resources\Images\icon_collapse*.svg" BaseSize="24,24" Resize="True" />
         <MauiFont Include="Resources\Fonts\*" />
         <MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
     </ItemGroup>
