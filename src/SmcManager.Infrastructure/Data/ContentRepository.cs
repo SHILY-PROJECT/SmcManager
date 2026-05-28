@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using SmcManager.Core.Interfaces;
 using SmcManager.Core.Models;
+using SmcManager.Core.Services;
 
 namespace SmcManager.Infrastructure.Data;
 
@@ -171,6 +172,23 @@ public class ContentRepository : IContentRepository
             .Include(c => c.Tag)
             .OrderByDescending(c => c.DownloadedAt)
             .FirstOrDefaultAsync(cancellationToken);
+
+    public async Task<ContentItem?> GetContentBySourceUrlAsync(
+        string sourceUrl,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(sourceUrl))
+            return null;
+
+        var normalized = ContentUrlNormalizer.Normalize(sourceUrl.Trim());
+        var items = await _db.ContentItems
+            .AsNoTracking()
+            .Where(c => c.SourceUrl != null && c.SourceUrl != string.Empty)
+            .ToListAsync(cancellationToken);
+
+        return items.FirstOrDefault(c =>
+            ContentUrlNormalizer.Normalize(c.SourceUrl) == normalized);
+    }
 
     public async Task<IReadOnlyList<ContentItem>> GetRecentContentAsync(int count, CancellationToken cancellationToken = default)
     {

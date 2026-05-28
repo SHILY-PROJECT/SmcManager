@@ -37,6 +37,8 @@ public partial class DownloadViewModel : ObservableObject,
     private CancellationTokenSource? _previewImageCts;
     private bool _suppressAccountSelectionChange;
     private bool _suppressUrlNormalization;
+    private bool _holdDownloadFormClear;
+    private string? _pendingDownloadUrl;
     private IReadOnlyList<SocialAccount> _lastPlatformAccounts = [];
     private SocialAccount? _lastDefaultAccount;
     private AppUserSettings? _lastAppSettings;
@@ -65,7 +67,13 @@ public partial class DownloadViewModel : ObservableObject,
         _logger = logger;
         WeakReferenceMessenger.Default.Register<ShareUrlReceivedMessage>(this);
         WeakReferenceMessenger.Default.Register<TagsChangedMessage>(this);
+        WeakReferenceMessenger.Default.Register<ContentDeletedMessage>(this);
     }
+
+    public bool HasUrl => !string.IsNullOrWhiteSpace(Url);
+
+    public bool ShowFallbackDownloadButton =>
+        !ShowLinkPreview && !string.IsNullOrWhiteSpace(ResolveActiveDownloadUrl());
 
     [ObservableProperty]
     private string _url = string.Empty;
@@ -163,11 +171,21 @@ public partial class DownloadViewModel : ObservableObject,
         await LoadTagsAsync();
         await RefreshRecentAsync();
         await ApplyPendingShareUrlAsync();
-        ScheduleUrlRefresh();
+
+        if (_holdDownloadFormClear)
+            await ClearDownloadInputAsync();
+        else if (!string.IsNullOrWhiteSpace(Url))
+            ScheduleUrlRefresh();
     }
 
     partial void OnUrlChanged(string value)
     {
+        OnPropertyChanged(nameof(HasUrl));
+        OnPropertyChanged(nameof(ShowFallbackDownloadButton));
+
+        if (!_suppressUrlNormalization && !string.IsNullOrWhiteSpace(value))
+            _holdDownloadFormClear = false;
+
         if (!_suppressUrlNormalization)
             ScheduleUrlRefresh();
     }
@@ -191,6 +209,7 @@ public partial class DownloadViewModel : ObservableObject,
     {
         UpdatePreviewAccountStatus();
         OnPropertyChanged(nameof(ShowPreviewAccountStatus));
+        OnPropertyChanged(nameof(ShowFallbackDownloadButton));
     }
 
     partial void OnPreviewAccountStatusChanged(string? value) =>
@@ -208,40 +227,53 @@ public partial class DownloadViewModel : ObservableObject,
     [RelayCommand]
     private async Task DownloadAsync()
     {
-        if (string.IsNullOrWhiteSpace(Url))
+        var activeUrl = ResolveActiveDownloadUrl();
+        if (string.IsNullOrWhiteSpace(activeUrl))
         {
             await _toast.ShowWarningAsync("Вставьте ссылку на пост, рилс или видео.");
             return;
         }
 
-        if (!UrlPlatformDetector.TryDetect(Url, out _, out _))
+        if (!UrlPlatformDetector.TryDetect(activeUrl, out _, out _))
         {
             await _toast.ShowWarningAsync("Ссылка не распознана. Поддерживаются Instagram, YouTube и ВКонтакте.");
             return;
         }
 
-        var normalizedUrl = ContentUrlNormalizer.Normalize(Url.Trim());
-        var job = new PendingDownloadViewModel(normalizedUrl, PreviewTitle, PreviewAuthor);
-        ActiveDownloads.Insert(0, job);
-        OnPropertyChanged(nameof(HasActiveDownloads));
+        var normalizedUrl = ContentUrlNormalizer.Normalize(activeUrl);
+
+        if (!await DuplicateDownloadHelper.ConfirmReplaceIfExistsAsync(_repository, normalizedUrl))
+            return;
 
         var (useAccount, accountId) = ResolveDownloadAccountSelection();
         var appSettings = await _settings.GetAppSettingsAsync().ConfigureAwait(false);
 
-        if (accountId is int savedAccountId
-            && UrlPlatformDetector.TryDetect(normalizedUrl, out var detectedPlatform, out _))
+        var job = new PendingDownloadViewModel(normalizedUrl, PreviewTitle, PreviewAuthor);
+
+        await MainThread.InvokeOnMainThreadAsync(() =>
         {
-            _ = PersistAuthenticatedAccountChoiceAsync(detectedPlatform, savedAccountId);
-        }
+            ActiveDownloads.Insert(0, job);
+            OnPropertyChanged(nameof(HasActiveDownloads));
 
-        _suppressUrlNormalization = true;
-        Url = string.Empty;
-        ClearLinkMetadataUi();
-        _suppressUrlNormalization = false;
+            if (accountId is int savedAccountId
+                && UrlPlatformDetector.TryDetect(normalizedUrl, out var detectedPlatform, out _))
+            {
+                _ = PersistAuthenticatedAccountChoiceAsync(detectedPlatform, savedAccountId);
+            }
 
-        StatusMessage = "Скачивание запущено. Можно добавить ещё ссылки.";
+            _holdDownloadFormClear = true;
+            ClearDownloadInputCore();
+            StatusMessage = "Скачивание запущено. Можно добавить ещё ссылки.";
+        });
 
         _ = RunDownloadJobAsync(job, normalizedUrl, useAccount, accountId, appSettings);
+    }
+
+    [RelayCommand]
+    private async Task ClearUrlAsync()
+    {
+        _holdDownloadFormClear = false;
+        await ClearDownloadInputAsync();
     }
 
     [RelayCommand]
@@ -327,8 +359,9 @@ public partial class DownloadViewModel : ObservableObject,
 
     private async Task RefreshMetadataOnlyAsync(CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(Url)
-            || !UrlPlatformDetector.TryDetect(Url, out _, out _))
+        var activeUrl = ResolveActiveDownloadUrl();
+        if (string.IsNullOrWhiteSpace(activeUrl)
+            || !UrlPlatformDetector.TryDetect(activeUrl, out _, out _))
         {
             return;
         }
@@ -346,7 +379,7 @@ public partial class DownloadViewModel : ObservableObject,
 
             var (useAccount, accountId) = ResolveDownloadAccountSelection();
 
-            var url = await EnsureCleanUrlInFieldAsync(Url).ConfigureAwait(false);
+            var url = await EnsureCleanUrlInFieldAsync(activeUrl).ConfigureAwait(false);
             var metadata = await _linkMetadata.GetMetadataAsync(
                 url, accountId, useAccount, ct).ConfigureAwait(false);
 
@@ -388,23 +421,38 @@ public partial class DownloadViewModel : ObservableObject,
 
     private async Task RefreshAfterUrlChangeAsync(CancellationToken ct)
     {
-        ClearLinkMetadataUi();
-
         if (string.IsNullOrWhiteSpace(Url))
         {
-            await MainThread.InvokeOnMainThreadAsync(ResetAccountPickerUi);
+            if (!string.IsNullOrWhiteSpace(_pendingDownloadUrl))
+                return;
+
+            await MainThread.InvokeOnMainThreadAsync(() =>
+            {
+                ClearLinkMetadataUi();
+                ResetAccountPickerUi();
+            });
             return;
         }
 
+        _pendingDownloadUrl = null;
+
         if (!UrlPlatformDetector.TryDetect(Url, out _, out _))
         {
-            await MainThread.InvokeOnMainThreadAsync(ResetAccountPickerUi);
+            await MainThread.InvokeOnMainThreadAsync(() =>
+            {
+                ClearLinkMetadataUi();
+                ResetAccountPickerUi();
+            });
             return;
         }
 
         try
         {
             await Task.Delay(650, ct).ConfigureAwait(false);
+            if (ct.IsCancellationRequested) return;
+
+            await MainThread.InvokeOnMainThreadAsync(ClearLinkMetadataUi);
+
             var url = await EnsureCleanUrlInFieldAsync(Url).ConfigureAwait(false);
             _logger.LogDebug("RefreshAfterUrlChangeAsync: fetching metadata for {Url}", url);
             await RefreshAccountPickerAsync(preserveUserSelection: false).ConfigureAwait(false);
@@ -468,6 +516,16 @@ public partial class DownloadViewModel : ObservableObject,
             ShowLinkPreview = !string.IsNullOrWhiteSpace(PreviewTitle)
                               || !string.IsNullOrWhiteSpace(PreviewThumbnail);
             _ = LoadPreviewImageAsync(preview.ThumbnailUrl);
+
+            if (ShowLinkPreview)
+            {
+                var activeUrl = ResolveActiveDownloadUrl();
+                if (!string.IsNullOrWhiteSpace(activeUrl))
+                    _pendingDownloadUrl = ContentUrlNormalizer.Normalize(activeUrl);
+
+                ClearUrlFieldOnly();
+                OnPropertyChanged(nameof(ShowFallbackDownloadButton));
+            }
 
             _logger.LogInformation(
                 "ApplyMetadata: preview shown. Title={Title}, Author={Author}, Thumb={Thumb}, ShowLinkPreview={Show}",
@@ -562,37 +620,89 @@ public partial class DownloadViewModel : ObservableObject,
         await MainThread.InvokeOnMainThreadAsync(() => PreviewImageSource = source);
     }
 
+    private void CancelPendingUrlWork()
+    {
+        _urlRefreshCts?.Cancel();
+        _urlRefreshCts?.Dispose();
+        _urlRefreshCts = null;
+
+        _metadataRefreshCts?.Cancel();
+        _metadataRefreshCts?.Dispose();
+        _metadataRefreshCts = null;
+
+        _previewImageCts?.Cancel();
+        _previewImageCts?.Dispose();
+        _previewImageCts = null;
+    }
+
+    private Task ClearDownloadInputAsync() =>
+        MainThread.InvokeOnMainThreadAsync(ClearDownloadInputCore);
+
+    private void ClearDownloadInputCore()
+    {
+        CancelPendingUrlWork();
+        _pendingDownloadUrl = null;
+
+        _suppressUrlNormalization = true;
+        Url = string.Empty;
+        _suppressUrlNormalization = false;
+
+        ClearLinkMetadataUi();
+        ResetAccountPickerUi();
+        OnPropertyChanged(nameof(HasUrl));
+        OnPropertyChanged(nameof(ShowFallbackDownloadButton));
+    }
+
+    private void ClearUrlFieldOnly()
+    {
+        _suppressUrlNormalization = true;
+        Url = string.Empty;
+        _suppressUrlNormalization = false;
+        OnPropertyChanged(nameof(HasUrl));
+    }
+
+    private string? ResolveActiveDownloadUrl()
+    {
+        if (!string.IsNullOrWhiteSpace(Url))
+            return CleanUrlForDisplay(Url);
+
+        return _pendingDownloadUrl;
+    }
+
     private void ClearLinkMetadataUi()
     {
-        _previewImageCts?.Cancel();
+        _pendingDownloadUrl = null;
         ShowLinkPreview = false;
+        OnPropertyChanged(nameof(ShowFallbackDownloadButton));
         PreviewTitle = null;
         PreviewAuthor = null;
         PreviewThumbnail = null;
         PreviewImageSource = null;
         PreviewAccountStatus = null;
-        ShowQualityPicker = false;
-        QualityOptions.Clear();
-        SelectedQuality = null;
         OnPropertyChanged(nameof(ShowPreviewAccountStatus));
+
+        ShowQualityPicker = false;
+        SelectedQuality = null;
+        QualityOptions.Clear();
     }
 
     private void ResetAccountPickerUi()
     {
-        AccountOptions.Clear();
         ShowAccountPicker = false;
-        _lastPlatformAccounts = [];
-        _lastDefaultAccount = null;
-        _lastAppSettings = null;
         _suppressAccountSelectionChange = true;
         SelectedAccountOption = null;
         _suppressAccountSelectionChange = false;
+        AccountOptions.Clear();
+        _lastPlatformAccounts = [];
+        _lastDefaultAccount = null;
+        _lastAppSettings = null;
     }
 
     private async Task RefreshAccountPickerAsync(bool preserveUserSelection = false)
     {
-        if (string.IsNullOrWhiteSpace(Url)
-            || !UrlPlatformDetector.TryDetect(Url, out var platform, out _))
+        var activeUrl = ResolveActiveDownloadUrl();
+        if (string.IsNullOrWhiteSpace(activeUrl)
+            || !UrlPlatformDetector.TryDetect(activeUrl, out var platform, out _))
         {
             await MainThread.InvokeOnMainThreadAsync(ResetAccountPickerUi);
             return;
@@ -761,6 +871,8 @@ public partial class DownloadViewModel : ObservableObject,
 
     private void SetUrl(string value)
     {
+        _holdDownloadFormClear = false;
+        _pendingDownloadUrl = null;
         _suppressUrlNormalization = true;
         Url = value;
         _suppressUrlNormalization = false;
@@ -778,15 +890,22 @@ public partial class DownloadViewModel : ObservableObject,
     private async Task<string> EnsureCleanUrlInFieldAsync(string currentUrl)
     {
         var cleaned = CleanUrlForDisplay(currentUrl);
-        if (string.Equals(cleaned, currentUrl.Trim(), StringComparison.Ordinal))
-            return cleaned;
 
-        await MainThread.InvokeOnMainThreadAsync(() =>
+        if (!string.IsNullOrWhiteSpace(Url)
+            && !string.Equals(cleaned, Url.Trim(), StringComparison.Ordinal))
         {
-            _suppressUrlNormalization = true;
-            Url = cleaned;
-            _suppressUrlNormalization = false;
-        });
+            await MainThread.InvokeOnMainThreadAsync(() =>
+            {
+                _suppressUrlNormalization = true;
+                Url = cleaned;
+                _suppressUrlNormalization = false;
+            });
+        }
+        else if (string.IsNullOrWhiteSpace(Url)
+                 && !string.Equals(cleaned, _pendingDownloadUrl, StringComparison.Ordinal))
+        {
+            await MainThread.InvokeOnMainThreadAsync(() => _pendingDownloadUrl = cleaned);
+        }
 
         return cleaned;
     }
@@ -863,18 +982,23 @@ public partial class DownloadViewModel : ObservableObject,
                         : "Готово";
                     job.Progress = 1;
                     job.IsCompleted = true;
+                    _holdDownloadFormClear = true;
+                    ClearDownloadInputCore();
                     await RefreshRecentAsync();
+                    ActiveDownloads.Remove(job);
                 }
                 else
                 {
                     _logger.LogWarning("RunDownloadJobAsync: failed {Error}", result.ErrorMessage);
                     job.Status = result.ErrorMessage ?? "Ошибка скачивания";
                     job.IsFailed = true;
+                    _holdDownloadFormClear = false;
                 }
 
                 job.IsActive = false;
                 OnPropertyChanged(nameof(HasActiveDownloads));
-                _ = RemoveFinishedJobLaterAsync(job);
+                if (!job.IsCompleted)
+                    _ = RemoveFinishedJobLaterAsync(job);
             });
         }
         catch (Exception ex)

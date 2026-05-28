@@ -17,6 +17,10 @@ public interface IContentRepository
 
     Task<ContentItem?> GetLatestContentAsync(CancellationToken cancellationToken = default);
 
+    Task<ContentItem?> GetContentBySourceUrlAsync(
+        string sourceUrl,
+        CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<ContentItem>> GetRecentContentAsync(int count, CancellationToken cancellationToken = default);
 
     Task<ContentItem> SaveContentAsync(ContentItem item, CancellationToken cancellationToken = default);
