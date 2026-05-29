@@ -23,89 +23,99 @@
             <VerticalStackLayout Padding="16,16,16,8" Spacing="16">
             <Grid IsVisible="{Binding HasMediaSlides}"
                   ColumnDefinitions="44,*,44"
-                  ColumnSpacing="6">
-                <ImageButton x:Name="CarouselPrevButton"
-                             Grid.Column="0"
-                             Style="{StaticResource CarouselNavButtonStyle}"
-                             Command="{Binding GoToPreviousSlideCommand}"
-                             IsVisible="{Binding ShowCarouselPrevious}"
-                             VerticalOptions="Center"
-                             SemanticProperties.Description="Предыдущий слайд" />
+                  ColumnSpacing="6"
+                  HeightRequest="{Binding MediaCarouselHeight}">
+                <Border Grid.Column="0"
+                        HeightRequest="{Binding MediaContentHeight}"
+                        VerticalOptions="Start"
+                        StrokeThickness="0"
+                        BackgroundColor="Transparent"
+                        Padding="0">
+                    <ImageButton x:Name="CarouselPrevButton"
+                                 Style="{StaticResource CarouselNavButtonStyle}"
+                                 Command="{Binding GoToPreviousSlideCommand}"
+                                 IsVisible="{Binding ShowCarouselPrevious}"
+                                 VerticalOptions="Center"
+                                 HorizontalOptions="Center"
+                                 SemanticProperties.Description="Предыдущий слайд" />
+                </Border>
 
-                <Grid Grid.Column="1">
-                    <CarouselView x:Name="MediaCarousel"
-                                  ItemsSource="{Binding MediaSlides}"
-                                  HeightRequest="{Binding MediaCarouselHeight}"
-                                  IndicatorView="{x:Reference MediaIndicator}"
-                                  Loop="False">
-                        <CarouselView.ItemTemplate>
-                            <views:MediaSlideDataTemplateSelector>
-                                <views:MediaSlideDataTemplateSelector.ImageTemplate>
-                                    <DataTemplate x:DataType="vm:MediaSlideViewModel">
-                                        <Grid VerticalOptions="Fill">
-                                            <controls:LocalImageView ImagePath="{Binding DisplayImagePath}"
-                                                                     ImageAspect="AspectFit"
-                                                                     HorizontalOptions="Fill"
-                                                                     VerticalOptions="Start" />
-                                        </Grid>
-                                    </DataTemplate>
-                                </views:MediaSlideDataTemplateSelector.ImageTemplate>
-                                <views:MediaSlideDataTemplateSelector.VideoTemplate>
-                                    <DataTemplate x:DataType="vm:MediaSlideViewModel">
-                                        <Grid VerticalOptions="Fill">
-                                            <controls:LocalImageView ImagePath="{Binding PosterPath}"
-                                                                     ImageAspect="AspectFit"
-                                                                     HorizontalOptions="Fill"
-                                                                     VerticalOptions="Center"
-                                                                     IsVisible="{Binding IsActive, Converter={StaticResource InvertedBoolConverter}}" />
-                                            <toolkit:MediaElement Source="{Binding ActiveVideoSource}"
-                                                                  IsVisible="{Binding IsActive}"
-                                                                  ShouldAutoPlay="False"
-                                                                  ShouldShowPlaybackControls="True"
-                                                                  ShouldLoopPlayback="False"
-                                                                  Aspect="AspectFit"
-                                                                  HorizontalOptions="Fill"
-                                                                  VerticalOptions="Center" />
-                                        </Grid>
-                                    </DataTemplate>
-                                </views:MediaSlideDataTemplateSelector.VideoTemplate>
-                            </views:MediaSlideDataTemplateSelector>
-                        </CarouselView.ItemTemplate>
-                    </CarouselView>
+                <Grid Grid.Column="1"
+                      RowDefinitions="*,Auto">
+                    <Grid Grid.Row="0">
+                        <CarouselView x:Name="MediaCarousel"
+                                      ItemsSource="{Binding MediaSlides}"
+                                      IndicatorView="{x:Reference MediaIndicator}"
+                                      Loop="False"
+                                      ZIndex="0">
+                            <CarouselView.ItemTemplate>
+                                <DataTemplate x:DataType="vm:MediaSlideViewModel">
+                                    <Grid VerticalOptions="Fill">
+                                        <controls:LocalImageView ImagePath="{Binding DisplayImagePath}"
+                                                                 ImageAspect="AspectFit"
+                                                                 HorizontalOptions="Fill"
+                                                                 VerticalOptions="Fill" />
+                                    </Grid>
+                                </DataTemplate>
+                            </CarouselView.ItemTemplate>
+                        </CarouselView>
 
-                    <ImageButton x:Name="ShareMediaButton"
-                                 Style="{StaticResource IconActionButtonStyle}"
-                                 WidthRequest="40"
-                                 HeightRequest="40"
-                                 Padding="8"
-                                 Margin="8"
-                                 HorizontalOptions="End"
-                                 VerticalOptions="Start"
-                                 IsVisible="{Binding HasMediaSlides}"
-                                 Command="{Binding ShareMediaCommand}"
-                                 SemanticProperties.Description="Поделиться файлом" />
+                        <toolkit:MediaElement Source="{Binding CurrentVideoSource}"
+                                              IsVisible="{Binding ShowCurrentVideoPlayer}"
+                                              ShouldAutoPlay="False"
+                                              ShouldShowPlaybackControls="True"
+                                              ShouldLoopPlayback="False"
+                                              Aspect="AspectFit"
+                                              HorizontalOptions="Fill"
+                                              VerticalOptions="Fill"
+                                              ZIndex="1" />
+
+                        <ImageButton x:Name="ShareMediaButton"
+                                     Style="{StaticResource IconActionButtonStyle}"
+                                     WidthRequest="40"
+                                     HeightRequest="40"
+                                     Padding="8"
+                                     Margin="8"
+                                     HorizontalOptions="End"
+                                     VerticalOptions="Start"
+                                     IsVisible="{Binding HasMediaSlides}"
+                                     Command="{Binding ShareMediaCommand}"
+                                     SemanticProperties.Description="Поделиться файлом"
+                                     ZIndex="3" />
+                    </Grid>
+
+                    <VerticalStackLayout Grid.Row="1"
+                                         Spacing="4"
+                                         Padding="0,6,0,0"
+                                         HorizontalOptions="Center"
+                                         IsVisible="{Binding HasMultipleSlides}">
+                        <IndicatorView x:Name="MediaIndicator"
+                                       IndicatorColor="{DynamicResource TextMuted}"
+                                       SelectedIndicatorColor="{DynamicResource AccentPrimary}" />
+
+                        <Label Text="{Binding SlideIndicator}"
+                               HorizontalOptions="Center"
+                               HorizontalTextAlignment="Center"
+                               TextColor="{DynamicResource TextMuted}"
+                               FontSize="12" />
+                    </VerticalStackLayout>
                 </Grid>
 
-                <ImageButton x:Name="CarouselNextButton"
-                             Grid.Column="2"
-                             Style="{StaticResource CarouselNavButtonStyle}"
-                             Command="{Binding GoToNextSlideCommand}"
-                             IsVisible="{Binding ShowCarouselNext}"
-                             VerticalOptions="Center"
-                             SemanticProperties.Description="Следующий слайд" />
+                <Border Grid.Column="2"
+                        HeightRequest="{Binding MediaContentHeight}"
+                        VerticalOptions="Start"
+                        StrokeThickness="0"
+                        BackgroundColor="Transparent"
+                        Padding="0">
+                    <ImageButton x:Name="CarouselNextButton"
+                                 Style="{StaticResource CarouselNavButtonStyle}"
+                                 Command="{Binding GoToNextSlideCommand}"
+                                 IsVisible="{Binding ShowCarouselNext}"
+                                 VerticalOptions="Center"
+                                 HorizontalOptions="Center"
+                                 SemanticProperties.Description="Следующий слайд" />
+                </Border>
             </Grid>
-
-            <IndicatorView x:Name="MediaIndicator"
-                           IndicatorColor="{DynamicResource TextMuted}"
-                           SelectedIndicatorColor="{DynamicResource AccentPrimary}"
-                           IsVisible="{Binding HasMultipleSlides}"
-                           HorizontalOptions="Center" />
-
-            <Label Text="{Binding SlideIndicator}"
-                   HorizontalOptions="Center"
-                   TextColor="{DynamicResource TextMuted}"
-                   FontSize="12"
-                   IsVisible="{Binding HasMultipleSlides}" />
 
             <Label Text="{Binding AuthorTitle}"
                    Style="{StaticResource EmojiCapableLabelStyle}"
@@ -135,7 +145,7 @@
                                 <controls:TagChipView Text="{Binding Name}"
                                                       ColorHex="{Binding ColorHex}"
                                                       IsSelected="{Binding IsSelected}"
-                                                      SelectCommand="{Binding Source={RelativeSource AncestorType={x:Type vm:ContentDetailViewModel}}, Path=ToggleContentTagCommand}"
+                                                      SelectCommand="{Binding Source={RelativeSource AncestorType={x:Type views:ContentDetailPage}}, Path=BindingContext.ToggleContentTagCommand}"
                                                       SelectParameter="{Binding .}"
                                                       VerticalOptions="Center" />
                             </DataTemplate>

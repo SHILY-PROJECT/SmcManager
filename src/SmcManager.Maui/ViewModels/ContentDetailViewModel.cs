@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using CommunityToolkit.Maui.Views;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
@@ -111,9 +112,26 @@ public partial class ContentDetailViewModel : ObservableObject, IQueryAttributab
     [ObservableProperty]
     private bool _isMediaExpanded;
 
+    [ObservableProperty]
+    private bool _showCurrentVideoPlayer;
+
+    [ObservableProperty]
+    private MediaSource? _currentVideoSource;
+
     public double MediaCarouselHeight => IsMediaExpanded ? ExpandedMediaHeight : DefaultMediaHeight;
 
+    public double CollapsedMediaHeight => DefaultMediaHeight;
+
     private const double DefaultMediaHeight = 320;
+
+    private const double CarouselNavButtonSize = 44;
+
+    private const double CarouselPagerHeight = 42;
+
+    public double MediaContentHeight =>
+        HasMultipleSlides
+            ? Math.Max(CarouselNavButtonSize, MediaCarouselHeight - CarouselPagerHeight)
+            : MediaCarouselHeight;
 
     private static double ExpandedMediaHeight
     {
@@ -199,7 +217,6 @@ public partial class ContentDetailViewModel : ObservableObject, IQueryAttributab
     partial void OnCurrentSlideIndexChanged(int value)
     {
         UpdateSlideIndicator();
-        UpdateActiveSlide(value);
         OnPropertyChanged(nameof(ShowCarouselPrevious));
         OnPropertyChanged(nameof(ShowCarouselNext));
         GoToPreviousSlideCommand.NotifyCanExecuteChanged();
@@ -208,6 +225,7 @@ public partial class ContentDetailViewModel : ObservableObject, IQueryAttributab
 
     partial void OnHasMultipleSlidesChanged(bool value)
     {
+        OnPropertyChanged(nameof(MediaContentHeight));
         OnPropertyChanged(nameof(ShowCarouselPrevious));
         OnPropertyChanged(nameof(ShowCarouselNext));
         GoToPreviousSlideCommand.NotifyCanExecuteChanged();
@@ -234,11 +252,13 @@ public partial class ContentDetailViewModel : ObservableObject, IQueryAttributab
             return;
 
         CurrentSlideIndex = position;
+        RefreshCurrentSlideMedia();
     }
 
     partial void OnIsMediaExpandedChanged(bool value)
     {
         OnPropertyChanged(nameof(MediaCarouselHeight));
+        OnPropertyChanged(nameof(MediaContentHeight));
         _ = PersistMediaExpandedAsync(value);
     }
 
@@ -520,8 +540,8 @@ public partial class ContentDetailViewModel : ObservableObject, IQueryAttributab
 
         CurrentSlideIndex = 0;
         UpdateSlideIndicator();
-        foreach (var slide in MediaSlides)
-            slide.IsActive = false;
+        ShowCurrentVideoPlayer = false;
+        CurrentVideoSource = null;
         OnPropertyChanged(nameof(ShowCarouselPrevious));
         OnPropertyChanged(nameof(ShowCarouselNext));
         OnPropertyChanged(nameof(CanToggleDescription));
@@ -529,27 +549,39 @@ public partial class ContentDetailViewModel : ObservableObject, IQueryAttributab
         GoToNextSlideCommand.NotifyCanExecuteChanged();
     }
 
-    public void UpdateActiveSlide(int index)
+    public void RefreshCurrentSlideMedia()
     {
-        if (MediaSlides.Count == 0)
+        var slide = GetCurrentSlide();
+        if (slide is { IsVideo: true } && File.Exists(slide.LocalPath))
+        {
+            ShowCurrentVideoPlayer = true;
+            CurrentVideoSource = MediaSource.FromFile(Path.GetFullPath(slide.LocalPath));
             return;
+        }
 
-        index = Math.Clamp(index, 0, MediaSlides.Count - 1);
-        for (var i = 0; i < MediaSlides.Count; i++)
-            MediaSlides[i].IsActive = i == index;
+        ShowCurrentVideoPlayer = false;
+        CurrentVideoSource = null;
     }
 
-    public async Task ActivateCurrentSlideAsync()
+    public void StopCurrentVideo()
     {
+        ShowCurrentVideoPlayer = false;
+        CurrentVideoSource = null;
+    }
+
+    public async Task PrepareCurrentSlideMediaAsync()
+    {
+        ShowCurrentVideoPlayer = false;
+        CurrentVideoSource = null;
+
         if (MediaSlides.Count == 0)
             return;
 
 #if ANDROID
-        await Task.Delay(150).ConfigureAwait(false);
+        await Task.Delay(200).ConfigureAwait(false);
 #endif
 
-        var index = CurrentSlideIndex;
-        await MainThread.InvokeOnMainThreadAsync(() => UpdateActiveSlide(index));
+        await MainThread.InvokeOnMainThreadAsync(RefreshCurrentSlideMedia);
     }
 
     private void UpdateSlideIndicator() =>

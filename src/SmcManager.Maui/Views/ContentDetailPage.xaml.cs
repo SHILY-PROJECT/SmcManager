@@ -38,14 +38,24 @@ public partial class ContentDetailPage : ContentPage, IRecipient<ThemeChangedMes
         AttachCarouselHandlers();
         ApplyThemedIcons();
         await vm.LoadForDisplayAsync();
-        ApplyCarouselPosition(vm.CurrentSlideIndex);
-        await vm.ActivateCurrentSlideAsync();
+
+        if (vm.MediaSlides.Count == 0)
+            return;
+
+        await Dispatcher.DispatchAsync(async () =>
+        {
+            ApplyCarouselPosition(vm.CurrentSlideIndex);
+            await vm.PrepareCurrentSlideMediaAsync();
+        });
     }
 
     protected override void OnDisappearing()
     {
         if (BindingContext is ContentDetailViewModel vm)
+        {
             vm.SlideNavigationRequested -= OnSlideNavigationRequested;
+            vm.StopCurrentVideo();
+        }
 
         if (_viewModel is not null)
         {
@@ -136,8 +146,13 @@ public partial class ContentDetailPage : ContentPage, IRecipient<ThemeChangedMes
         _isUpdatingCarousel = true;
         try
         {
-            vm.CurrentSlideIndex = position;
-            CarouselSlideNavigator.NavigateTo(MediaCarousel, position, vm.MediaSlides.Count);
+            if (vm.CurrentSlideIndex != position)
+                vm.CurrentSlideIndex = position;
+
+            vm.RefreshCurrentSlideMedia();
+
+            if (MediaCarousel.Handler is not null)
+                CarouselSlideNavigator.NavigateTo(MediaCarousel, position, vm.MediaSlides.Count);
         }
         finally
         {
