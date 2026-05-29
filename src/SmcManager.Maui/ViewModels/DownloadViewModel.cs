@@ -42,6 +42,7 @@ public partial class DownloadViewModel : ObservableObject,
     private IReadOnlyList<SocialAccount> _lastPlatformAccounts = [];
     private SocialAccount? _lastDefaultAccount;
     private AppUserSettings? _lastAppSettings;
+    private SocialPlatform? _previewPlatform;
 
     public DownloadViewModel(
         IDownloadOrchestrator orchestrator,
@@ -163,13 +164,23 @@ public partial class DownloadViewModel : ObservableObject,
     private ImageSource? _previewImageSource;
 
     [ObservableProperty]
-    private string? _previewAccountStatus;
+    private ImageSource? _previewPlatformIcon;
+
+    [ObservableProperty]
+    private ImageSource? _previewAuthStatusIcon;
+
+    [ObservableProperty]
+    private bool _previewUsesAuthenticatedAccount;
 
     [ObservableProperty]
     private DownloadQualityOption? _selectedQuality;
 
-    public bool ShowPreviewAccountStatus =>
-        ShowLinkPreview && !string.IsNullOrWhiteSpace(PreviewAccountStatus);
+    public bool ShowPreviewAccountIndicators => ShowLinkPreview;
+
+    public string PreviewAuthStatusDescription =>
+        PreviewUsesAuthenticatedAccount
+            ? "Скачивание с авторизованным аккаунтом"
+            : "Скачивание без аккаунта";
 
     public ObservableCollection<DownloadQualityOption> QualityOptions { get; } = [];
 
@@ -216,20 +227,20 @@ public partial class DownloadViewModel : ObservableObject,
         if (value is { IsNoAccount: false, AccountId: int accountId, Platform: var platform })
             _ = PersistAuthenticatedAccountChoiceAsync(platform.Value, accountId);
 
-        UpdatePreviewAccountStatus();
+        UpdatePreviewAccountIndicators();
         ScheduleMetadataRefresh();
     }
 
     partial void OnShowLinkPreviewChanged(bool value)
     {
-        UpdatePreviewAccountStatus();
-        OnPropertyChanged(nameof(ShowPreviewAccountStatus));
+        UpdatePreviewAccountIndicators();
+        OnPropertyChanged(nameof(ShowPreviewAccountIndicators));
         OnPropertyChanged(nameof(ShowPreviewDownloadButton));
         OnPropertyChanged(nameof(ShowFallbackDownloadButton));
     }
 
-    partial void OnPreviewAccountStatusChanged(string? value) =>
-        OnPropertyChanged(nameof(ShowPreviewAccountStatus));
+    partial void OnPreviewUsesAuthenticatedAccountChanged(bool value) =>
+        OnPropertyChanged(nameof(PreviewAuthStatusDescription));
 
     partial void OnIsNewTagPanelVisibleChanged(bool value) =>
         OnPropertyChanged(nameof(NewTagPanelToggleText));
@@ -535,6 +546,7 @@ public partial class DownloadViewModel : ObservableObject,
     {
         if (metadata.Preview is { } preview)
         {
+            _previewPlatform = preview.Platform;
             PreviewTitle = preview.Title;
             PreviewAuthor = string.IsNullOrWhiteSpace(preview.Author)
                 ? SocialAccountAuth.GetPlatformTitle(preview.Platform)
@@ -582,50 +594,65 @@ public partial class DownloadViewModel : ObservableObject,
             ShowQualityPicker,
             SelectedQuality?.Label);
 
-        UpdatePreviewAccountStatus();
+        UpdatePreviewAccountIndicators();
     }
 
-    private void UpdatePreviewAccountStatus()
+    private void UpdatePreviewAccountIndicators()
     {
         if (!ShowLinkPreview)
         {
-            PreviewAccountStatus = null;
-            OnPropertyChanged(nameof(ShowPreviewAccountStatus));
+            PreviewPlatformIcon = null;
+            PreviewAuthStatusIcon = null;
+            PreviewUsesAuthenticatedAccount = false;
+            OnPropertyChanged(nameof(ShowPreviewAccountIndicators));
             return;
         }
 
-        PreviewAccountStatus = BuildPreviewAccountStatus(
+        var platform = ResolvePreviewPlatform();
+        PreviewPlatformIcon = SocialPlatformIcons.GetIcon(platform);
+        PreviewUsesAuthenticatedAccount = ResolvePreviewUsesAuthenticatedAccount(
             SelectedAccountOption,
             _lastAppSettings,
             _lastPlatformAccounts,
             _lastDefaultAccount);
+        PreviewAuthStatusIcon = SocialPlatformIcons.GetAuthStatusIcon(PreviewUsesAuthenticatedAccount);
 
-        OnPropertyChanged(nameof(ShowPreviewAccountStatus));
+        OnPropertyChanged(nameof(ShowPreviewAccountIndicators));
     }
 
-    private static string BuildPreviewAccountStatus(
+    private SocialPlatform ResolvePreviewPlatform()
+    {
+        if (_previewPlatform is { } platform)
+            return platform;
+
+        var activeUrl = ResolveActiveDownloadUrl();
+        return !string.IsNullOrWhiteSpace(activeUrl)
+               && UrlPlatformDetector.TryDetect(activeUrl, out var detected, out _)
+            ? detected
+            : SocialPlatform.YouTube;
+    }
+
+    private static bool ResolvePreviewUsesAuthenticatedAccount(
         AccountPickerOption? selected,
         AppUserSettings? appSettings,
         IReadOnlyList<SocialAccount> accounts,
         SocialAccount? defaultAccount)
     {
         if (selected?.IsNoAccount == true)
-            return "Аккаунт не используется";
+            return false;
 
-        if (selected is { IsNoAccount: false } && !string.IsNullOrWhiteSpace(selected.ShortTitle))
-            return $"Аккаунт: {selected.ShortTitle}";
+        if (selected is { IsNoAccount: false, AccountId: not null })
+            return true;
 
         if (appSettings?.PreferDownloadWithoutAccount == true && accounts.Count == 0)
-            return "Аккаунт не используется";
+            return false;
 
         var account = defaultAccount
                       ?? accounts.FirstOrDefault(a => a.IsDefault)
                       ?? accounts.FirstOrDefault(a => SocialAccountAuth.HasAuth(a))
                       ?? accounts.FirstOrDefault();
 
-        return account is null || !SocialAccountAuth.HasAuth(account)
-            ? "Аккаунт не используется"
-            : $"Аккаунт: {SocialAccountAuth.GetAccountShortLabel(account)}";
+        return account is not null && SocialAccountAuth.HasAuth(account);
     }
 
     private async Task LoadPreviewImageAsync(string? url)
@@ -699,14 +726,17 @@ public partial class DownloadViewModel : ObservableObject,
     private void ClearLinkMetadataUi()
     {
         _pendingDownloadUrl = null;
+        _previewPlatform = null;
         ShowLinkPreview = false;
         OnPropertyChanged(nameof(ShowFallbackDownloadButton));
         PreviewTitle = null;
         PreviewAuthor = null;
         PreviewThumbnail = null;
         PreviewImageSource = null;
-        PreviewAccountStatus = null;
-        OnPropertyChanged(nameof(ShowPreviewAccountStatus));
+        PreviewPlatformIcon = null;
+        PreviewAuthStatusIcon = null;
+        PreviewUsesAuthenticatedAccount = false;
+        OnPropertyChanged(nameof(ShowPreviewAccountIndicators));
 
         ShowQualityPicker = false;
         SelectedQuality = null;
@@ -787,7 +817,7 @@ public partial class DownloadViewModel : ObservableObject,
                 : $"Скачивание с cookies аккаунта ({SocialAccountAuth.GetPlatformTitle(platform)}).";
 
             ShowAccountPicker = ShouldShowAccountPicker(appSettings, platform, accounts, defaultAccount);
-            UpdatePreviewAccountStatus();
+            UpdatePreviewAccountIndicators();
         });
     }
 

@@ -204,24 +204,23 @@
                                     </HorizontalStackLayout>
                                 </Grid>
                             </Grid>
-                            <Border HorizontalOptions="End"
-                                    VerticalOptions="Start"
-                                    Padding="8,4"
-                                    MaximumWidthRequest="200"
-                                    BackgroundColor="{DynamicResource BackgroundElevated}"
-                                    Stroke="{DynamicResource Divider}"
-                                    StrokeThickness="1"
-                                    IsVisible="{Binding ShowPreviewAccountStatus}">
-                                <Border.StrokeShape>
-                                    <RoundRectangle CornerRadius="8" />
-                                </Border.StrokeShape>
-                                <Label Text="{Binding PreviewAccountStatus}"
-                                       TextColor="{DynamicResource TextSecondary}"
-                                       FontSize="11"
-                                       LineBreakMode="TailTruncation"
-                                       MaxLines="2"
-                                       HorizontalTextAlignment="End" />
-                            </Border>
+                            <HorizontalStackLayout HorizontalOptions="End"
+                                                   VerticalOptions="Start"
+                                                   Spacing="6"
+                                                   IsVisible="{Binding ShowPreviewAccountIndicators}">
+                                <Image Source="{Binding PreviewPlatformIcon}"
+                                       WidthRequest="18"
+                                       HeightRequest="18"
+                                       Aspect="AspectFit"
+                                       VerticalOptions="Center"
+                                       SemanticProperties.Description="Соцсеть" />
+                                <Image Source="{Binding PreviewAuthStatusIcon}"
+                                       WidthRequest="18"
+                                       HeightRequest="18"
+                                       Aspect="AspectFit"
+                                       VerticalOptions="Center"
+                                       SemanticProperties.Description="{Binding PreviewAuthStatusDescription}" />
+                            </HorizontalStackLayout>
                         </Grid>
                     </Border>
 

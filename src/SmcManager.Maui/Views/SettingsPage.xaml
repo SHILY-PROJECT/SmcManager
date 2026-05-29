@@ -150,7 +150,7 @@
                                                   RowSpacing="10"
                                                   ColumnSpacing="12">
                                                 <VerticalStackLayout Grid.Row="0"
-                                                                     Grid.ColumnSpan="2"
+                                                                     Grid.Column="0"
                                                                      Spacing="4">
                                                     <HorizontalStackLayout Spacing="8">
                                                         <Label Text="{Binding Title}"
@@ -177,6 +177,16 @@
                                                            FontSize="12" />
                                                 </VerticalStackLayout>
 
+                                                <ImageButton Grid.Row="0"
+                                                             Grid.Column="1"
+                                                             Style="{StaticResource IconActionButtonStyle}"
+                                                             Source="{DynamicResource DeleteIcon}"
+                                                             VerticalOptions="Start"
+                                                             HorizontalOptions="End"
+                                                             Command="{Binding Source={RelativeSource AncestorType={x:Type vm:SettingsViewModel}}, Path=DeleteAccountCommand}"
+                                                             CommandParameter="{Binding .}"
+                                                             SemanticProperties.Description="Удалить аккаунт" />
+
                                                 <Label Grid.Row="1"
                                                        Grid.Column="0"
                                                        Text="Для скачивания"
@@ -197,15 +207,6 @@
                                                         IsVisible="{Binding IsDefault, Converter={StaticResource InvertedBoolConverter}}"
                                                         Command="{Binding Source={RelativeSource AncestorType={x:Type vm:SettingsViewModel}}, Path=SetDefaultAccountCommand}"
                                                         CommandParameter="{Binding .}" />
-                                                <ImageButton Grid.Row="2"
-                                                             Grid.Column="1"
-                                                             Style="{StaticResource IconActionButtonStyle}"
-                                                             Source="{DynamicResource DeleteIcon}"
-                                                             VerticalOptions="End"
-                                                             HorizontalOptions="End"
-                                                             Command="{Binding Source={RelativeSource AncestorType={x:Type vm:SettingsViewModel}}, Path=DeleteAccountCommand}"
-                                                             CommandParameter="{Binding .}"
-                                                             SemanticProperties.Description="Удалить аккаунт" />
                                             </Grid>
                                         </Border>
                                     </DataTemplate>

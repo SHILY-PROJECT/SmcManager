@@ -1,5 +1,7 @@
+using SmcManager.Core.Enums;
 using SmcManager.Core.Models;
 using SmcManager.Core.Services;
+using SmcManager.Maui.Services;
 
 namespace SmcManager.Maui.ViewModels;
 
@@ -22,6 +24,10 @@ public class ContentItemDisplayModel
 
     public string PlatformLabel { get; init; } = string.Empty;
 
+    public SocialPlatform Platform { get; init; }
+
+    public ImageSource PlatformIcon { get; init; } = null!;
+
     public string? TagName { get; init; }
 
     public string? TagColor { get; init; }
@@ -40,6 +46,8 @@ public class ContentItemDisplayModel
         CommentPreview = Truncate(item.UserComment, 80),
         KindLabel = item.Kind.ToString(),
         PlatformLabel = item.Platform.ToString(),
+        Platform = item.Platform,
+        PlatformIcon = SocialPlatformIcons.GetIcon(item.Platform),
         TagName = item.Tag?.Name,
         TagColor = item.Tag?.ColorHex,
         ThumbnailPath = ContentThumbnailHelper.ResolveThumbnailPath(item, downloadsRoot),

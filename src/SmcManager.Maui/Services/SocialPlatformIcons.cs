@@ -17,4 +17,7 @@ public static class SocialPlatformIcons
         SocialPlatform.Vkontakte => "icon_platform_vk.png",
         _ => "icon_platform_instagram.png"
     };
+
+    public static ImageSource GetAuthStatusIcon(bool usesAuthenticatedAccount) =>
+        ThemedIconHelper.FromFile(usesAuthenticatedAccount ? "icon_user_access.png" : "icon_user_none.png");
 }

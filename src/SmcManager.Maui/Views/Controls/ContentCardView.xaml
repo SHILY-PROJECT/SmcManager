@@ -17,13 +17,34 @@
                 <TapGestureRecognizer Tapped="OnCardTapped" />
             </Border.GestureRecognizers>
             <Grid ColumnDefinitions="88,*" ColumnSpacing="14" Padding="4">
-                <Border WidthRequest="80" HeightRequest="80" StrokeThickness="0">
-                    <Border.StrokeShape>
-                        <RoundRectangle CornerRadius="12" />
-                    </Border.StrokeShape>
-                    <Image Source="{Binding ThumbnailSource, Source={x:Reference Root}}"
-                           Aspect="AspectFill" />
-                </Border>
+                <Grid WidthRequest="80"
+                      HeightRequest="80">
+                    <Border StrokeThickness="0">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="12" />
+                        </Border.StrokeShape>
+                        <Image Source="{Binding ThumbnailSource, Source={x:Reference Root}}"
+                               Aspect="AspectFill" />
+                    </Border>
+                    <Border HorizontalOptions="End"
+                            VerticalOptions="End"
+                            Margin="4"
+                            Padding="3"
+                            BackgroundColor="{DynamicResource BackgroundElevated}"
+                            Stroke="{DynamicResource Divider}"
+                            StrokeThickness="1"
+                            InputTransparent="True">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="6" />
+                        </Border.StrokeShape>
+                        <Image Source="{Binding PlatformIcon, Source={x:Reference Root}}"
+                               WidthRequest="16"
+                               HeightRequest="16"
+                               Aspect="AspectFit"
+                               InputTransparent="True"
+                               SemanticProperties.Description="Соцсеть" />
+                    </Border>
+                </Grid>
                 <VerticalStackLayout Grid.Column="1" Spacing="4" VerticalOptions="Center">
                     <Label Text="{Binding AuthorUsername, Source={x:Reference Root}}"
                            Style="{StaticResource EmojiCapableLabelStyle}"
