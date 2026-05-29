@@ -164,10 +164,10 @@ public partial class DownloadViewModel : ObservableObject,
     private ImageSource? _previewImageSource;
 
     [ObservableProperty]
-    private ImageSource? _previewPlatformIcon;
+    private string? _previewPlatformIconFile;
 
     [ObservableProperty]
-    private ImageSource? _previewAuthStatusIcon;
+    private string? _previewAuthStatusIconFile;
 
     [ObservableProperty]
     private bool _previewUsesAuthenticatedAccount;
@@ -601,21 +601,21 @@ public partial class DownloadViewModel : ObservableObject,
     {
         if (!ShowLinkPreview)
         {
-            PreviewPlatformIcon = null;
-            PreviewAuthStatusIcon = null;
+            PreviewPlatformIconFile = null;
+            PreviewAuthStatusIconFile = null;
             PreviewUsesAuthenticatedAccount = false;
             OnPropertyChanged(nameof(ShowPreviewAccountIndicators));
             return;
         }
 
         var platform = ResolvePreviewPlatform();
-        PreviewPlatformIcon = SocialPlatformIcons.GetIcon(platform);
+        PreviewPlatformIconFile = SocialPlatformIcons.GetIconFileName(platform);
         PreviewUsesAuthenticatedAccount = ResolvePreviewUsesAuthenticatedAccount(
             SelectedAccountOption,
             _lastAppSettings,
             _lastPlatformAccounts,
             _lastDefaultAccount);
-        PreviewAuthStatusIcon = SocialPlatformIcons.GetAuthStatusIcon(PreviewUsesAuthenticatedAccount);
+        PreviewAuthStatusIconFile = SocialPlatformIcons.GetAuthStatusIconFileName(PreviewUsesAuthenticatedAccount);
 
         OnPropertyChanged(nameof(ShowPreviewAccountIndicators));
     }
@@ -733,8 +733,8 @@ public partial class DownloadViewModel : ObservableObject,
         PreviewAuthor = null;
         PreviewThumbnail = null;
         PreviewImageSource = null;
-        PreviewPlatformIcon = null;
-        PreviewAuthStatusIcon = null;
+        PreviewPlatformIconFile = null;
+        PreviewAuthStatusIconFile = null;
         PreviewUsesAuthenticatedAccount = false;
         OnPropertyChanged(nameof(ShowPreviewAccountIndicators));
 

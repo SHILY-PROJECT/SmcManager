@@ -30,7 +30,7 @@ public partial class ContentCardView : ContentView
     }
 
     public ImageSource? ThumbnailSource { get; private set; }
-    public ImageSource? PlatformIcon { get; private set; }
+    public string PlatformIconFile { get; private set; } = string.Empty;
     public string AuthorUsername { get; private set; } = string.Empty;
     public string? CaptionPreview { get; private set; }
 
@@ -48,7 +48,7 @@ public partial class ContentCardView : ContentView
             return;
 
         view.ThumbnailSource = RemoteImageCache.FromLocalPath(item.ThumbnailPath);
-        view.PlatformIcon = item.PlatformIcon;
+        view.PlatformIconFile = item.PlatformIconFile;
         view.AuthorUsername = $"@{item.AuthorUsername}";
         view.CaptionPreview = item.CaptionPreview ?? "Без описания";
         view.CommentPreview = string.IsNullOrWhiteSpace(item.CommentPreview)
@@ -58,7 +58,7 @@ public partial class ContentCardView : ContentView
         view.KindLabel = item.KindLabel;
         view.MediaCount = item.MediaCount;
         view.OnPropertyChanged(nameof(ThumbnailSource));
-        view.OnPropertyChanged(nameof(PlatformIcon));
+        view.OnPropertyChanged(nameof(PlatformIconFile));
         view.OnPropertyChanged(nameof(AuthorUsername));
         view.OnPropertyChanged(nameof(CaptionPreview));
         view.OnPropertyChanged(nameof(CommentPreview));

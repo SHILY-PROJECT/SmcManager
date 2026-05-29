@@ -16,66 +16,61 @@
             <Border.GestureRecognizers>
                 <TapGestureRecognizer Tapped="OnCardTapped" />
             </Border.GestureRecognizers>
-            <Grid ColumnDefinitions="88,*" ColumnSpacing="14" Padding="4">
-                <Grid WidthRequest="80"
-                      HeightRequest="80">
-                    <Border StrokeThickness="0">
+            <Grid Padding="4">
+                <Grid ColumnDefinitions="88,*" ColumnSpacing="14">
+                    <Border WidthRequest="80"
+                            HeightRequest="80"
+                            StrokeThickness="0">
                         <Border.StrokeShape>
                             <RoundRectangle CornerRadius="12" />
                         </Border.StrokeShape>
                         <Image Source="{Binding ThumbnailSource, Source={x:Reference Root}}"
                                Aspect="AspectFill" />
                     </Border>
-                    <Border HorizontalOptions="End"
-                            VerticalOptions="End"
-                            Margin="4"
-                            Padding="3"
-                            BackgroundColor="{DynamicResource BackgroundElevated}"
-                            Stroke="{DynamicResource Divider}"
-                            StrokeThickness="1"
-                            InputTransparent="True">
-                        <Border.StrokeShape>
-                            <RoundRectangle CornerRadius="6" />
-                        </Border.StrokeShape>
-                        <Image Source="{Binding PlatformIcon, Source={x:Reference Root}}"
-                               WidthRequest="16"
-                               HeightRequest="16"
-                               Aspect="AspectFit"
-                               InputTransparent="True"
-                               SemanticProperties.Description="Соцсеть" />
-                    </Border>
+                    <VerticalStackLayout Grid.Column="1" Spacing="4" VerticalOptions="Center">
+                        <Label Text="{Binding AuthorUsername, Source={x:Reference Root}}"
+                               Style="{StaticResource EmojiCapableLabelStyle}"
+                               FontAttributes="Bold"
+                               TextColor="{DynamicResource TextPrimary}"
+                               FontSize="15"
+                               InputTransparent="True" />
+                        <Label Text="{Binding CaptionPreview, Source={x:Reference Root}}"
+                               Style="{StaticResource EmojiCapableLabelStyle}"
+                               TextColor="{DynamicResource TextSecondary}"
+                               FontSize="13"
+                               LineBreakMode="TailTruncation"
+                               MaxLines="2"
+                               InputTransparent="True" />
+                        <Label Text="{Binding CommentPreview, Source={x:Reference Root}}"
+                               Style="{StaticResource EmojiCapableLabelStyle}"
+                               TextColor="{DynamicResource TextMuted}"
+                               FontSize="12"
+                               LineBreakMode="TailTruncation"
+                               MaxLines="1"
+                               IsVisible="{Binding HasCommentPreview, Source={x:Reference Root}}"
+                               InputTransparent="True" />
+                        <HorizontalStackLayout Spacing="8" InputTransparent="True">
+                            <Label Text="{Binding KindLabel, Source={x:Reference Root}}"
+                                   Style="{StaticResource ChipLabelStyle}"
+                                   InputTransparent="True" />
+                            <Label Text="{Binding MediaCount, Source={x:Reference Root}, StringFormat='{0} медиа'}"
+                                   Style="{StaticResource ChipLabelStyle}"
+                                   InputTransparent="True" />
+                        </HorizontalStackLayout>
+                    </VerticalStackLayout>
                 </Grid>
-                <VerticalStackLayout Grid.Column="1" Spacing="4" VerticalOptions="Center">
-                    <Label Text="{Binding AuthorUsername, Source={x:Reference Root}}"
-                           Style="{StaticResource EmojiCapableLabelStyle}"
-                           FontAttributes="Bold"
-                           TextColor="{DynamicResource TextPrimary}"
-                           FontSize="15"
-                           InputTransparent="True" />
-                    <Label Text="{Binding CaptionPreview, Source={x:Reference Root}}"
-                           Style="{StaticResource EmojiCapableLabelStyle}"
-                           TextColor="{DynamicResource TextSecondary}"
-                           FontSize="13"
-                           LineBreakMode="TailTruncation"
-                           MaxLines="2"
-                           InputTransparent="True" />
-                    <Label Text="{Binding CommentPreview, Source={x:Reference Root}}"
-                           Style="{StaticResource EmojiCapableLabelStyle}"
-                           TextColor="{DynamicResource TextMuted}"
-                           FontSize="12"
-                           LineBreakMode="TailTruncation"
-                           MaxLines="1"
-                           IsVisible="{Binding HasCommentPreview, Source={x:Reference Root}}"
-                           InputTransparent="True" />
-                    <HorizontalStackLayout Spacing="8" InputTransparent="True">
-                        <Label Text="{Binding KindLabel, Source={x:Reference Root}}"
-                               Style="{StaticResource ChipLabelStyle}"
-                               InputTransparent="True" />
-                        <Label Text="{Binding MediaCount, Source={x:Reference Root}, StringFormat='{0} медиа'}"
-                               Style="{StaticResource ChipLabelStyle}"
-                               InputTransparent="True" />
-                    </HorizontalStackLayout>
-                </VerticalStackLayout>
+                <HorizontalStackLayout HorizontalOptions="End"
+                                       VerticalOptions="Start"
+                                       Spacing="6"
+                                       InputTransparent="True">
+                    <Image Source="{Binding PlatformIconFile, Source={x:Reference Root}}"
+                           WidthRequest="18"
+                           HeightRequest="18"
+                           Aspect="AspectFit"
+                           VerticalOptions="Center"
+                           InputTransparent="True"
+                           SemanticProperties.Description="Соцсеть" />
+                </HorizontalStackLayout>
             </Grid>
         </Border>
     </SwipeView>

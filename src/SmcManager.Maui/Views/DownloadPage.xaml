@@ -208,18 +208,18 @@
                                                    VerticalOptions="Start"
                                                    Spacing="6"
                                                    IsVisible="{Binding ShowPreviewAccountIndicators}">
-                                <Image Source="{Binding PreviewPlatformIcon}"
-                                       WidthRequest="18"
-                                       HeightRequest="18"
-                                       Aspect="AspectFit"
-                                       VerticalOptions="Center"
-                                       SemanticProperties.Description="Соцсеть" />
-                                <Image Source="{Binding PreviewAuthStatusIcon}"
+                                <Image Source="{Binding PreviewAuthStatusIconFile}"
                                        WidthRequest="18"
                                        HeightRequest="18"
                                        Aspect="AspectFit"
                                        VerticalOptions="Center"
                                        SemanticProperties.Description="{Binding PreviewAuthStatusDescription}" />
+                                <Image Source="{Binding PreviewPlatformIconFile}"
+                                       WidthRequest="18"
+                                       HeightRequest="18"
+                                       Aspect="AspectFit"
+                                       VerticalOptions="Center"
+                                       SemanticProperties.Description="Соцсеть" />
                             </HorizontalStackLayout>
                         </Grid>
                     </Border>

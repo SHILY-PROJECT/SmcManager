@@ -14,7 +14,7 @@ public partial class SocialAccountRowViewModel : ObservableObject
     {
         Account = account;
         IsActive = account.IsActive;
-        PlatformIcon = SocialPlatformIcons.GetIcon(account.Platform);
+        PlatformIconFile = SocialPlatformIcons.GetIconFileName(account.Platform);
 
         var username = ResolveUsernameForDisplay(account);
         var hasCustomTitle = !string.IsNullOrWhiteSpace(account.DisplayName)
@@ -72,7 +72,7 @@ public partial class SocialAccountRowViewModel : ObservableObject
 
     public string Title { get; }
 
-    public ImageSource PlatformIcon { get; }
+    public string PlatformIconFile { get; }
 
     public string? Nickname { get; }
 

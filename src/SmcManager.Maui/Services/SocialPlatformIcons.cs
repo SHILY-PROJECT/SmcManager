@@ -7,9 +7,6 @@ namespace SmcManager.Maui.Services;
 /// </summary>
 public static class SocialPlatformIcons
 {
-    public static ImageSource GetIcon(SocialPlatform platform) =>
-        ThemedIconHelper.FromFile(GetIconFileName(platform));
-
     public static string GetIconFileName(SocialPlatform platform) => platform switch
     {
         SocialPlatform.Instagram => "icon_platform_instagram.png",
@@ -18,6 +15,6 @@ public static class SocialPlatformIcons
         _ => "icon_platform_instagram.png"
     };
 
-    public static ImageSource GetAuthStatusIcon(bool usesAuthenticatedAccount) =>
-        ThemedIconHelper.FromFile(usesAuthenticatedAccount ? "icon_user_access.png" : "icon_user_none.png");
+    public static string GetAuthStatusIconFileName(bool usesAuthenticatedAccount) =>
+        usesAuthenticatedAccount ? "icon_user_access.png" : "icon_user_none.png";
 }

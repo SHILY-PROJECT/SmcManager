@@ -26,7 +26,7 @@ public class ContentItemDisplayModel
 
     public SocialPlatform Platform { get; init; }
 
-    public ImageSource PlatformIcon { get; init; } = null!;
+    public string PlatformIconFile { get; init; } = string.Empty;
 
     public string? TagName { get; init; }
 
@@ -47,7 +47,7 @@ public class ContentItemDisplayModel
         KindLabel = item.Kind.ToString(),
         PlatformLabel = item.Platform.ToString(),
         Platform = item.Platform,
-        PlatformIcon = SocialPlatformIcons.GetIcon(item.Platform),
+        PlatformIconFile = SocialPlatformIcons.GetIconFileName(item.Platform),
         TagName = item.Tag?.Name,
         TagColor = item.Tag?.ColorHex,
         ThumbnailPath = ContentThumbnailHelper.ResolveThumbnailPath(item, downloadsRoot),

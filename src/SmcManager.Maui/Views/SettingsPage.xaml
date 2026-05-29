@@ -160,7 +160,7 @@
                                                                VerticalOptions="Center" />
                                                         <HorizontalStackLayout Spacing="4"
                                                                                VerticalOptions="Center">
-                                                            <Image Source="{Binding PlatformIcon}"
+                                                            <Image Source="{Binding PlatformIconFile}"
                                                                    WidthRequest="18"
                                                                    HeightRequest="18"
                                                                    Aspect="AspectFit"
