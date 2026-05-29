@@ -26,7 +26,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <MauiIcon Include="Resources\AppIcon\appicon.png" ForegroundFile="Resources\AppIcon\appiconfg.png" />
+        <MauiIcon Include="Resources\AppIcon\appiconfg.png" />
         <MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#0D0D12" BaseSize="128,128" />
         <MauiImage Include="Resources\Images\*" />
         <MauiImage Update="Resources\Images\tab_*.svg" BaseSize="24,24" Resize="True" />

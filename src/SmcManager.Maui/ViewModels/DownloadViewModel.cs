@@ -136,12 +136,14 @@ public partial class DownloadViewModel : ObservableObject,
     [NotifyPropertyChangedFor(nameof(IsLoadingLinkMetadata))]
     [NotifyPropertyChangedFor(nameof(ShowPreviewDownloadButton))]
     [NotifyPropertyChangedFor(nameof(ShowFallbackDownloadButton))]
+    [NotifyPropertyChangedFor(nameof(ShowLinkMetadataReady))]
     private bool _isLoadingQualities;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsLoadingLinkMetadata))]
     [NotifyPropertyChangedFor(nameof(ShowPreviewDownloadButton))]
     [NotifyPropertyChangedFor(nameof(ShowFallbackDownloadButton))]
+    [NotifyPropertyChangedFor(nameof(ShowLinkMetadataReady))]
     private bool _isLoadingPreview;
 
     public bool IsLoadingLinkMetadata => IsLoadingPreview || IsLoadingQualities;
@@ -149,7 +151,11 @@ public partial class DownloadViewModel : ObservableObject,
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowPreviewDownloadButton))]
     [NotifyPropertyChangedFor(nameof(ShowFallbackDownloadButton))]
+    [NotifyPropertyChangedFor(nameof(ShowLinkMetadataReady))]
+    [NotifyPropertyChangedFor(nameof(ShowPreviewAccountIndicators))]
     private bool _showLinkPreview;
+
+    public bool ShowLinkMetadataReady => ShowLinkPreview && !IsLoadingLinkMetadata;
 
     [ObservableProperty]
     private string? _previewTitle;
