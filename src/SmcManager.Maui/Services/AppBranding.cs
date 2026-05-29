@@ -13,6 +13,8 @@ public static class AppBranding
 
     public const string Subtitle = "Скачивание и архив";
 
+    public const string AppLogoImage = "app_logo.png";
+
     public static void ApplyWindowTitles()
     {
         var app = Application.Current;

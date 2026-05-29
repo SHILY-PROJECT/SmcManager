@@ -14,7 +14,7 @@ public static class UrlPlatformDetector
 
         if (string.IsNullOrWhiteSpace(url)) return false;
 
-        url = ContentUrlNormalizer.ExtractHttpUrl(url);
+        url = ContentUrlNormalizer.PrepareForDetection(url);
         if (!Uri.TryCreate(url.Trim(), UriKind.Absolute, out var uri))
             return false;
 

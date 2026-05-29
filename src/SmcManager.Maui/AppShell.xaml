@@ -16,11 +16,35 @@
        Title="">
 
     <Shell.FlyoutContent>
-        <Grid RowDefinitions="*"
+        <Grid RowDefinitions="Auto,*"
               SafeAreaEdges="Container"
               Padding="0,16,0,16"
               BackgroundColor="{DynamicResource BackgroundSecondary}">
-            <CollectionView Grid.Row="0"
+            <VerticalStackLayout Grid.Row="0"
+                                 Padding="18,0,18,12"
+                                 Spacing="8">
+                <Border WidthRequest="56"
+                        HeightRequest="56"
+                        HorizontalOptions="Start"
+                        BackgroundColor="{DynamicResource BackgroundPrimary}"
+                        Stroke="{DynamicResource Divider}"
+                        StrokeThickness="1">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="14" />
+                    </Border.StrokeShape>
+                    <Image Source="app_logo.png"
+                           WidthRequest="44"
+                           HeightRequest="44"
+                           Aspect="AspectFit"
+                           HorizontalOptions="Center"
+                           VerticalOptions="Center" />
+                </Border>
+                <Label Text="SmcManager"
+                       FontSize="18"
+                       FontAttributes="Bold"
+                       TextColor="{DynamicResource TextPrimary}" />
+            </VerticalStackLayout>
+            <CollectionView Grid.Row="1"
                             x:Name="FlyoutMenuView"
                             ItemsSource="{Binding FlyoutMenuItems, Source={x:Reference ShellRoot}}"
                             SelectionMode="Single"

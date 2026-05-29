@@ -4,6 +4,7 @@ using Android.Content.PM;
 using Android.OS;
 using AndroidX.Activity;
 using AndroidX.Core.View;
+using Microsoft.Maui.Storage;
 using SmcManager.Maui.Services;
 
 namespace SmcManager.Maui;
@@ -18,6 +19,8 @@ namespace SmcManager.Maui;
 [IntentFilter(new[] { Intent.ActionSend }, Categories = new[] { Intent.CategoryDefault }, DataMimeType = "text/plain")]
 public class MainActivity : MauiAppCompatActivity
 {
+    private string? _deferredShareText;
+
     protected override void OnCreate(Bundle? savedInstanceState)
     {
         base.OnCreate(savedInstanceState);
@@ -34,22 +37,59 @@ public class MainActivity : MauiAppCompatActivity
     protected override void OnNewIntent(Intent? intent)
     {
         base.OnNewIntent(intent);
+        if (intent is null)
+            return;
+
+        Intent = intent;
         HandleShareIntent(intent);
+    }
+
+    protected override void OnResume()
+    {
+        base.OnResume();
+        ProcessDeferredShareText();
     }
 
     private void HandleShareIntent(Intent? intent)
     {
-        if (intent?.Action != Intent.ActionSend) return;
-        if (intent.Type != "text/plain") return;
+        var sharedText = AndroidShareIntentReader.ReadText(intent);
+        if (string.IsNullOrWhiteSpace(sharedText))
+            return;
 
-        var sharedText = intent.GetStringExtra(Intent.ExtraText);
-        if (string.IsNullOrWhiteSpace(sharedText)) return;
-
-        var services = Microsoft.Maui.Controls.Application.Current?.Handler?.MauiContext?.Services;
-        var shareService = services?.GetService<ShareLinkService>();
-        if (shareService is not null)
-            _ = shareService.HandleIncomingUrlAsync(sharedText);
+        if (!TryHandleShareText(sharedText))
+            _deferredShareText = sharedText;
     }
+
+    private void ProcessDeferredShareText()
+    {
+        if (string.IsNullOrWhiteSpace(_deferredShareText))
+            return;
+
+        var text = _deferredShareText;
+        _deferredShareText = null;
+
+        if (!TryHandleShareText(text))
+            _deferredShareText = text;
+    }
+
+    private bool TryHandleShareText(string sharedText)
+    {
+        var shareService = ResolveShareService();
+        if (shareService is null)
+        {
+            if (!ShareLinkService.TryNormalizeIncomingUrl(sharedText, out var normalized))
+                return false;
+
+            Preferences.Default.Set(MauiSettingsService.PendingShareUrlPreferenceKey, normalized);
+            return true;
+        }
+
+        _ = shareService.HandleIncomingUrlAsync(sharedText);
+        return true;
+    }
+
+    private static ShareLinkService? ResolveShareService() =>
+        IPlatformApplication.Current?.Services?.GetService<ShareLinkService>();
 
     private sealed class BackNavigationCallback : OnBackPressedCallback
     {

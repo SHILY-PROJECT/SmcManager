@@ -26,9 +26,30 @@ public static class ContentUrlNormalizer
         return candidate.TrimEnd('.', ',', ';', ')', ']', '"', '\'');
     }
 
+    /// <summary>
+    /// Извлекает ссылку и добавляет https://, если Instagram/YouTube/VK прислали URL без схемы.
+    /// </summary>
+    public static string PrepareForDetection(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return string.Empty;
+
+        var extracted = ExtractHttpUrl(text).Trim();
+        if (string.IsNullOrWhiteSpace(extracted))
+            return string.Empty;
+
+        if (Uri.TryCreate(extracted, UriKind.Absolute, out _))
+            return extracted;
+
+        if (LooksLikeSupportedHost(extracted))
+            return $"https://{extracted.TrimStart('/')}";
+
+        return extracted;
+    }
+
     public static string Normalize(string url)
     {
-        var extracted = ExtractHttpUrl(url);
+        var extracted = PrepareForDetection(url);
         if (!Uri.TryCreate(extracted.Trim(), UriKind.Absolute, out var uri))
             return extracted.Trim();
 
@@ -58,6 +79,17 @@ public static class ContentUrlNormalizer
             return uri.GetLeftPart(UriPartial.Path);
 
         return uri.GetLeftPart(UriPartial.Path);
+    }
+
+    private static bool LooksLikeSupportedHost(string text)
+    {
+        var lower = text.ToLowerInvariant();
+        return lower.Contains("instagram.com", StringComparison.Ordinal)
+               || lower.Contains("instagr.am", StringComparison.Ordinal)
+               || lower.Contains("youtube.com", StringComparison.Ordinal)
+               || lower.Contains("youtu.be", StringComparison.Ordinal)
+               || lower.Contains("vk.com", StringComparison.Ordinal)
+               || lower.Contains("vkontakte", StringComparison.Ordinal);
     }
 
     private static int FindHttpUrlStart(string text)

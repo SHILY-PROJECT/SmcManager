@@ -34,9 +34,7 @@
                     </Border>
                     <Button Grid.Column="1"
                             Text="×"
-                            Style="{StaticResource SecondaryIconButtonStyle}"
-                            FontSize="22"
-                            TextColor="{DynamicResource TextPrimary}"
+                            Style="{StaticResource ClearUrlCircleButtonStyle}"
                             VerticalOptions="Center"
                             IsVisible="{Binding HasUrl}"
                             Command="{Binding ClearUrlCommand}"

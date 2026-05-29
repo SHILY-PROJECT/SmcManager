@@ -11,7 +11,9 @@ namespace SmcManager.Maui.Services;
 public class MauiSettingsService : ISettingsService
 {
     private const string ProxyKey = "proxy_settings";
-    private const string PendingUrlKey = "pending_share_url";
+    public const string PendingShareUrlPreferenceKey = "pending_share_url";
+
+    private const string PendingUrlKey = PendingShareUrlPreferenceKey;
     private const string ColorThemeKey = "color_theme";
     private const string AppSettingsKey = "app_user_settings";
     private const string SettingsSectionsKey = "settings_sections_state";

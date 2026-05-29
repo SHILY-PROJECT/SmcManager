@@ -16,9 +16,10 @@
         <!-- Имя под иконкой на Android и в списке приложений (см. AppBranding.FullTitle) -->
         <ApplicationTitle>SmcManager - от меня щас что требуется?</ApplicationTitle>
         <ApplicationId>com.shily.smcmanager</ApplicationId>
-        <ApplicationDisplayVersion>0.1.53</ApplicationDisplayVersion>
+        <ApplicationDisplayVersion>0.1.54</ApplicationDisplayVersion>
 <!--        <ApplicationVersion>104</ApplicationVersion>-->
         <WindowsPackageType>None</WindowsPackageType>
+        <ApplicationIcon Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">Resources\AppIcon\appicon.ico</ApplicationIcon>
 
         <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">34.0</SupportedOSPlatformVersion>
         <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</SupportedOSPlatformVersion>
@@ -28,9 +29,13 @@
     <ItemGroup>
         <MauiIcon Include="Resources\AppIcon\appicon.png"
                   ForegroundFile="Resources\AppIcon\appiconfg.png"
-                  Color="#0D0D12" />
-        <MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#0D0D12" BaseSize="128,128" />
+                  Color="#0D0D12"
+                  ForegroundScale="0.68" />
+        <MauiSplashScreen Include="Resources\AppIcon\appiconfg.png"
+                          Color="#0D0D12"
+                          BaseSize="256,256" />
         <MauiImage Include="Resources\Images\*" />
+        <MauiImage Update="Resources\Images\app_logo.png" BaseSize="44,44" Resize="True" />
         <MauiImage Update="Resources\Images\tab_*.svg" BaseSize="24,24" Resize="True" />
         <MauiImage Update="Resources\Images\tab_*_dark.svg" BaseSize="24,24" Resize="True" />
         <MauiImage Update="Resources\Images\carousel_*.svg" BaseSize="40,40" Resize="True" />

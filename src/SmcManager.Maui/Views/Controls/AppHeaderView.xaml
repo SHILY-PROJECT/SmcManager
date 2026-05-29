@@ -17,16 +17,17 @@
                 <Border.StrokeShape>
                     <RoundRectangle CornerRadius="12" />
                 </Border.StrokeShape>
-                <ImageButton x:Name="MenuButton"
-                             Source="{DynamicResource MenuIcon}"
-                             WidthRequest="44"
-                             HeightRequest="44"
-                             Padding="10"
-                             BackgroundColor="Transparent"
-                             HorizontalOptions="Center"
-                             VerticalOptions="Center"
-                             Clicked="OnMenuClicked"
-                             SemanticProperties.Description="Меню" />
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="OnMenuClicked" />
+                </Border.GestureRecognizers>
+                <Image x:Name="AppLogoImage"
+                       Source="app_logo.png"
+                       WidthRequest="36"
+                       HeightRequest="36"
+                       Aspect="AspectFit"
+                       HorizontalOptions="Center"
+                       VerticalOptions="Center"
+                       SemanticProperties.Description="Меню" />
             </Border>
             <VerticalStackLayout Grid.Column="1"
                                  VerticalOptions="Center"

@@ -388,7 +388,13 @@ public partial class DownloadViewModel : ObservableObject,
         SetUrl(CleanUrlForDisplay(text));
     }
 
-    public void Receive(ShareUrlReceivedMessage message) => SetUrl(CleanUrlForDisplay(message.Url));
+    public void Receive(ShareUrlReceivedMessage message)
+    {
+        if (MainThread.IsMainThread)
+            SetUrl(CleanUrlForDisplay(message.Url));
+        else
+            MainThread.BeginInvokeOnMainThread(() => SetUrl(CleanUrlForDisplay(message.Url)));
+    }
 
     public void Receive(TagsChangedMessage message) => _ = LoadTagsAsync();
 
@@ -436,6 +442,7 @@ public partial class DownloadViewModel : ObservableObject,
 
     private async Task RefreshMetadataOnlyAsync(CancellationToken ct)
     {
+        var owner = _metadataRefreshCts;
         var activeUrl = ResolveActiveDownloadUrl();
         if (string.IsNullOrWhiteSpace(activeUrl)
             || !UrlPlatformDetector.TryDetect(activeUrl, out _, out _))
@@ -485,15 +492,18 @@ public partial class DownloadViewModel : ObservableObject,
         }
         finally
         {
-            if (!ct.IsCancellationRequested)
+            await MainThread.InvokeOnMainThreadAsync(() =>
             {
-                await MainThread.InvokeOnMainThreadAsync(FinishLinkMetadataLoading);
-            }
+                if (ReferenceEquals(_metadataRefreshCts, owner) || !ct.IsCancellationRequested)
+                    FinishLinkMetadataLoading();
+            });
         }
     }
 
     private async Task RefreshAfterUrlChangeAsync(CancellationToken ct)
     {
+        var owner = _urlRefreshCts;
+
         if (string.IsNullOrWhiteSpace(Url))
         {
             if (!string.IsNullOrWhiteSpace(_pendingDownloadUrl))
@@ -566,10 +576,11 @@ public partial class DownloadViewModel : ObservableObject,
         }
         finally
         {
-            if (!ct.IsCancellationRequested)
+            await MainThread.InvokeOnMainThreadAsync(() =>
             {
-                await MainThread.InvokeOnMainThreadAsync(FinishLinkMetadataLoading);
-            }
+                if (ReferenceEquals(_urlRefreshCts, owner) || !ct.IsCancellationRequested)
+                    FinishLinkMetadataLoading();
+            });
         }
     }
 
@@ -726,6 +737,9 @@ public partial class DownloadViewModel : ObservableObject,
         _previewImageCts?.Cancel();
         _previewImageCts?.Dispose();
         _previewImageCts = null;
+
+        IsLoadingPreview = false;
+        IsLoadingQualities = false;
     }
 
     private Task ClearDownloadInputAsync() =>
@@ -986,7 +1000,7 @@ public partial class DownloadViewModel : ObservableObject,
 
     private static string CleanUrlForDisplay(string url)
     {
-        var trimmed = ContentUrlNormalizer.ExtractHttpUrl(url);
+        var trimmed = ContentUrlNormalizer.PrepareForDetection(url);
         return UrlPlatformDetector.TryDetect(trimmed, out _, out _)
             ? ContentUrlNormalizer.Normalize(trimmed)
             : trimmed;
