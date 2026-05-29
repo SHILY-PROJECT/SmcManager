@@ -39,6 +39,8 @@ public partial class ContentCardView : ContentView
     public bool HasCommentPreview { get; private set; }
     public string KindLabel { get; private set; } = string.Empty;
     public int MediaCount { get; private set; }
+    public IReadOnlyList<ContentTagDisplayModel> Tags { get; private set; } = [];
+    public bool HasTags { get; private set; }
 
     public ContentCardView() => InitializeComponent();
 
@@ -57,6 +59,8 @@ public partial class ContentCardView : ContentView
         view.HasCommentPreview = !string.IsNullOrWhiteSpace(view.CommentPreview);
         view.KindLabel = item.KindLabel;
         view.MediaCount = item.MediaCount;
+        view.Tags = item.Tags;
+        view.HasTags = item.HasTags;
         view.OnPropertyChanged(nameof(ThumbnailSource));
         view.OnPropertyChanged(nameof(PlatformIconFile));
         view.OnPropertyChanged(nameof(AuthorUsername));
@@ -65,6 +69,8 @@ public partial class ContentCardView : ContentView
         view.OnPropertyChanged(nameof(HasCommentPreview));
         view.OnPropertyChanged(nameof(KindLabel));
         view.OnPropertyChanged(nameof(MediaCount));
+        view.OnPropertyChanged(nameof(Tags));
+        view.OnPropertyChanged(nameof(HasTags));
     }
 
     private bool _isNavigating;

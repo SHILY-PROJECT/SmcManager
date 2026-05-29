@@ -28,9 +28,9 @@ public class ContentItemDisplayModel
 
     public string PlatformIconFile { get; init; } = string.Empty;
 
-    public string? TagName { get; init; }
+    public IReadOnlyList<ContentTagDisplayModel> Tags { get; init; } = [];
 
-    public string? TagColor { get; init; }
+    public bool HasTags => Tags.Count > 0;
 
     public string? ThumbnailPath { get; init; }
 
@@ -48,8 +48,10 @@ public class ContentItemDisplayModel
         PlatformLabel = item.Platform.ToString(),
         Platform = item.Platform,
         PlatformIconFile = SocialPlatformIcons.GetIconFileName(item.Platform),
-        TagName = item.Tag?.Name,
-        TagColor = item.Tag?.ColorHex,
+        Tags = item.Tags
+            .OrderBy(t => t.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(t => new ContentTagDisplayModel { Name = t.Name, ColorHex = t.ColorHex })
+            .ToList(),
         ThumbnailPath = ContentThumbnailHelper.ResolveThumbnailPath(item, downloadsRoot),
         MediaCount = item.MediaFiles.Count,
         DownloadedAt = item.DownloadedAt.ToLocalTime()

@@ -88,8 +88,10 @@
                                         <Border.StrokeShape>
                                             <RoundRectangle CornerRadius="12" />
                                         </Border.StrokeShape>
-                                        <Image Source="{Binding PreviewImageSource}"
-                                               Aspect="AspectFill" />
+                                        <controls:LocalImageView ImagePath="{Binding PreviewImageFile}"
+                                                                 ImageAspect="AspectFill"
+                                                                 ImageWidth="80"
+                                                                 ImageHeight="80" />
                                     </Border>
                                     <VerticalStackLayout Grid.Column="1"
                                                          Spacing="4"
@@ -157,7 +159,7 @@
                                                 <controls:TagChipView Text="{Binding Name}"
                                                                       ColorHex="{Binding ColorHex}"
                                                                       IsSelected="{Binding IsSelected}"
-                                                                      SelectCommand="{Binding Source={RelativeSource AncestorType={x:Type vm:DownloadViewModel}}, Path=SelectTagChipCommand}"
+                                                                      SelectCommand="{Binding Source={RelativeSource AncestorType={x:Type vm:DownloadViewModel}}, Path=ToggleTagChipCommand}"
                                                                       SelectParameter="{Binding .}" />
                                             </DataTemplate>
                                         </CollectionView.ItemTemplate>

@@ -61,7 +61,6 @@ internal static class YtdlpContentMapper
             AuthorDisplayName = video?.Uploader ?? video?.Title,
             Caption = captionOverride ?? video?.Description ?? video?.Title,
             PostedAt = postedAt,
-            TagId = request.TagId,
             DownloadedAt = DateTime.UtcNow
         };
     }

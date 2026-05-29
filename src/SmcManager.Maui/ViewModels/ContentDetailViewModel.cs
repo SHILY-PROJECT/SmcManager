@@ -56,6 +56,10 @@ public partial class ContentDetailViewModel : ObservableObject, IQueryAttributab
 
     public ObservableCollection<MediaSlideViewModel> MediaSlides { get; } = [];
 
+    public ObservableCollection<ContentTagDisplayModel> Tags { get; } = [];
+
+    public bool HasTags => Tags.Count > 0;
+
     [ObservableProperty]
     private string _authorTitle = string.Empty;
 
@@ -433,6 +437,17 @@ public partial class ContentDetailViewModel : ObservableObject, IQueryAttributab
         IsEditingComment = false;
         IsContentLoaded = true;
         OnPropertyChanged(nameof(ShowCaptionPlaceholder));
+
+        Tags.Clear();
+        foreach (var tag in item.Tags.OrderBy(t => t.Name, StringComparer.OrdinalIgnoreCase))
+        {
+            Tags.Add(new ContentTagDisplayModel
+            {
+                Name = tag.Name,
+                ColorHex = tag.ColorHex
+            });
+        }
+        OnPropertyChanged(nameof(HasTags));
 
         var downloadsRoot = _storagePaths.DownloadsPath;
         var thumbnailPath = ContentThumbnailHelper.ResolveThumbnailPath(item, downloadsRoot);

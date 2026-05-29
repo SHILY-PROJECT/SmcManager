@@ -16,7 +16,7 @@ public sealed class RemoteImageCache
         Directory.CreateDirectory(_cacheDir);
     }
 
-    public async Task<ImageSource?> GetImageSourceAsync(string? url, CancellationToken cancellationToken = default)
+    public async Task<string?> GetCachedFilePathAsync(string? url, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(url))
             return null;
@@ -26,7 +26,7 @@ public sealed class RemoteImageCache
 
         var cachePath = Path.Combine(_cacheDir, BuildCacheFileName(uri));
         if (File.Exists(cachePath) && new FileInfo(cachePath).Length >= 256)
-            return ImageSource.FromFile(cachePath);
+            return cachePath;
 
         try
         {
@@ -45,24 +45,43 @@ public sealed class RemoteImageCache
             await using var output = File.Create(cachePath);
             await input.CopyToAsync(output, cancellationToken).ConfigureAwait(false);
 
-            return new FileInfo(cachePath).Length >= 256
-                ? ImageSource.FromFile(cachePath)
-                : null;
+            return new FileInfo(cachePath).Length >= 256 ? cachePath : null;
         }
         catch
         {
             TryDelete(cachePath);
-            return ImageSource.FromUri(uri);
+            return url;
         }
     }
 
-    public static ImageSource? FromLocalPath(string? path)
+    public async Task<ImageSource?> GetImageSourceAsync(string? url, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+        var path = await GetCachedFilePathAsync(url, cancellationToken).ConfigureAwait(false);
+        if (string.IsNullOrWhiteSpace(path))
             return null;
 
-        return ImageSource.FromFile(path);
+        return path.StartsWith("http", StringComparison.OrdinalIgnoreCase)
+            ? ImageSource.FromUri(new Uri(path))
+            : ImageSource.FromFile(path);
     }
+
+    public static ImageSource? SourceFromPathOrUrl(string? pathOrUrl)
+    {
+        if (string.IsNullOrWhiteSpace(pathOrUrl))
+            return null;
+
+        if (pathOrUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
+            || pathOrUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+        {
+            return Uri.TryCreate(pathOrUrl, UriKind.Absolute, out var uri)
+                ? ImageSource.FromUri(uri)
+                : null;
+        }
+
+        return File.Exists(pathOrUrl) ? ImageSource.FromFile(pathOrUrl) : null;
+    }
+
+    public static ImageSource? FromLocalPath(string? path) => SourceFromPathOrUrl(path);
 
     private static string BuildCacheFileName(Uri uri)
     {

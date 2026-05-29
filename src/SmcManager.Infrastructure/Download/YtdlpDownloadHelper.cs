@@ -75,6 +75,7 @@ internal static class YtdlpDownloadHelper
                 cancellationToken);
 
             content = await repository.SaveContentAsync(content, cancellationToken);
+            await DownloadTagHelper.ApplyTagsAsync(repository, content, request, cancellationToken);
             return new DownloadResult { Success = true, Content = content };
         }
         finally

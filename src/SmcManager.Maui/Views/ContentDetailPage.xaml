@@ -104,6 +104,22 @@
                    FontAttributes="Bold"
                    TextColor="{DynamicResource TextPrimary}" />
 
+            <CollectionView ItemsSource="{Binding Tags}"
+                            HeightRequest="32"
+                            IsVisible="{Binding HasTags}"
+                            SelectionMode="None">
+                <CollectionView.ItemsLayout>
+                    <LinearItemsLayout Orientation="Horizontal" ItemSpacing="6" />
+                </CollectionView.ItemsLayout>
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="vm:ContentTagDisplayModel">
+                        <controls:TagChipView Text="{Binding Name}"
+                                              ColorHex="{Binding ColorHex}"
+                                              IsSelected="False" />
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+
             <toolkit:Expander IsExpanded="True"
                               IsVisible="{Binding IsContentLoaded}">
                 <toolkit:Expander.Header>

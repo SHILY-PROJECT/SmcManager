@@ -12,7 +12,7 @@ public class DownloadRequest
     /// <summary>Тип контента (пост / рилс / сторис), если известен из URL.</summary>
     public ContentKind? ContentKind { get; set; }
 
-    public int? TagId { get; set; }
+    public IReadOnlyList<int> TagIds { get; set; } = [];
 
     public int? SocialAccountId { get; set; }
 

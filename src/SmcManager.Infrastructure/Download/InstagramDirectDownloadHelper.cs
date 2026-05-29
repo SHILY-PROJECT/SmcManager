@@ -121,6 +121,8 @@ internal static class InstagramDirectDownloadHelper
                 cancellationToken).ConfigureAwait(false);
 
             content = await repository.SaveContentAsync(content, cancellationToken).ConfigureAwait(false);
+            await DownloadTagHelper.ApplyTagsAsync(repository, content, request, cancellationToken)
+                .ConfigureAwait(false);
             logger.LogInformation(
                 "InstagramDirectDownload: success contentId={ContentId}, media={MediaCount}",
                 content.Id,

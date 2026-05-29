@@ -30,11 +30,11 @@ public class DownloadOrchestrator : IDownloadOrchestrator
     {
         request.Url = ContentUrlNormalizer.Normalize(request.Url);
         _logger.LogInformation(
-            "DownloadAndSaveAsync: url={Url}, platform accountId={AccountId}, useAccount={UseAccount}, tagId={TagId}",
+            "DownloadAndSaveAsync: url={Url}, platform accountId={AccountId}, useAccount={UseAccount}, tagIds={TagIds}",
             request.Url,
             request.SocialAccountId,
             request.UseSocialAccount,
-            request.TagId);
+            request.TagIds);
 
         if (!Uri.TryCreate(request.Url.Trim(), UriKind.Absolute, out var uri))
         {

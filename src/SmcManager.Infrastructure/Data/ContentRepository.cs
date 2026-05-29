@@ -100,6 +100,74 @@ public class ContentRepository : IContentRepository
         catch { }
 
         await MigrateLegacySessionTokensAsync(cancellationToken);
+        await MigrateContentItemTagsAsync(cancellationToken);
+    }
+
+    private async Task MigrateContentItemTagsAsync(CancellationToken cancellationToken)
+    {
+        var connection = _db.Database.GetDbConnection();
+        if (connection.State != System.Data.ConnectionState.Open)
+            await connection.OpenAsync(cancellationToken);
+
+        var columnNames = new List<string>();
+        await using (var command = connection.CreateCommand())
+        {
+            command.CommandText = "PRAGMA table_info('ContentItemTags');";
+            await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+            while (await reader.ReadAsync(cancellationToken))
+                columnNames.Add(reader.GetString(1));
+        }
+
+        if (columnNames.Contains("ContentItemsId", StringComparer.OrdinalIgnoreCase))
+        {
+            await _db.Database.ExecuteSqlRawAsync(
+                """
+                CREATE TABLE ContentItemTags_fixed (
+                    ContentItemId INTEGER NOT NULL,
+                    TagsId INTEGER NOT NULL,
+                    PRIMARY KEY (ContentItemId, TagsId),
+                    FOREIGN KEY (ContentItemId) REFERENCES ContentItems(Id) ON DELETE CASCADE,
+                    FOREIGN KEY (TagsId) REFERENCES Tags(Id) ON DELETE CASCADE
+                );
+
+                INSERT OR IGNORE INTO ContentItemTags_fixed (ContentItemId, TagsId)
+                SELECT ContentItemsId, TagsId FROM ContentItemTags;
+
+                DROP TABLE ContentItemTags;
+                ALTER TABLE ContentItemTags_fixed RENAME TO ContentItemTags;
+                """,
+                cancellationToken);
+        }
+        else if (columnNames.Count == 0)
+        {
+            await _db.Database.ExecuteSqlRawAsync(
+                """
+                CREATE TABLE ContentItemTags (
+                    ContentItemId INTEGER NOT NULL,
+                    TagsId INTEGER NOT NULL,
+                    PRIMARY KEY (ContentItemId, TagsId),
+                    FOREIGN KEY (ContentItemId) REFERENCES ContentItems(Id) ON DELETE CASCADE,
+                    FOREIGN KEY (TagsId) REFERENCES Tags(Id) ON DELETE CASCADE
+                );
+                """,
+                cancellationToken);
+        }
+
+        try
+        {
+            await _db.Database.ExecuteSqlRawAsync(
+                """
+                INSERT OR IGNORE INTO ContentItemTags (ContentItemId, TagsId)
+                SELECT Id, TagId
+                FROM ContentItems
+                WHERE TagId IS NOT NULL;
+                """,
+                cancellationToken);
+        }
+        catch
+        {
+            // legacy TagId column missing or already migrated
+        }
     }
 
     private async Task MigrateLegacySessionTokensAsync(CancellationToken cancellationToken)
@@ -148,28 +216,28 @@ public class ContentRepository : IContentRepository
     public Task<ContentItem?> GetContentByIdAsync(int id, CancellationToken cancellationToken = default) =>
         _db.ContentItems
             .Include(c => c.MediaFiles)
-            .Include(c => c.Tag)
+            .Include(c => c.Tags)
             .FirstOrDefaultAsync(c => c.Id == id, cancellationToken);
 
     public async Task<IReadOnlyList<ContentItem>> GetAllContentAsync(CancellationToken cancellationToken = default) =>
         await _db.ContentItems
             .Include(c => c.MediaFiles)
-            .Include(c => c.Tag)
+            .Include(c => c.Tags)
             .OrderByDescending(c => c.DownloadedAt)
             .ToListAsync(cancellationToken);
 
     public async Task<IReadOnlyList<ContentItem>> GetContentByTagAsync(int tagId, CancellationToken cancellationToken = default) =>
         await _db.ContentItems
             .Include(c => c.MediaFiles)
-            .Include(c => c.Tag)
-            .Where(c => c.TagId == tagId)
+            .Include(c => c.Tags)
+            .Where(c => c.Tags.Any(t => t.Id == tagId))
             .OrderByDescending(c => c.DownloadedAt)
             .ToListAsync(cancellationToken);
 
     public Task<ContentItem?> GetLatestContentAsync(CancellationToken cancellationToken = default) =>
         _db.ContentItems
             .Include(c => c.MediaFiles)
-            .Include(c => c.Tag)
+            .Include(c => c.Tags)
             .OrderByDescending(c => c.DownloadedAt)
             .FirstOrDefaultAsync(cancellationToken);
 
@@ -196,7 +264,7 @@ public class ContentRepository : IContentRepository
 
         return await _db.ContentItems
             .Include(c => c.MediaFiles)
-            .Include(c => c.Tag)
+            .Include(c => c.Tags)
             .OrderByDescending(c => c.DownloadedAt)
             .Take(count)
             .ToListAsync(cancellationToken);
@@ -258,11 +326,30 @@ public class ContentRepository : IContentRepository
         }
     }
 
-    public async Task AssignTagAsync(int contentId, int? tagId, CancellationToken cancellationToken = default)
+    public async Task AssignTagsAsync(
+        int contentId,
+        IReadOnlyList<int> tagIds,
+        CancellationToken cancellationToken = default)
     {
-        var item = await _db.ContentItems.FindAsync([contentId], cancellationToken);
-        if (item is null) return;
-        item.TagId = tagId;
+        var item = await _db.ContentItems
+            .Include(c => c.Tags)
+            .FirstOrDefaultAsync(c => c.Id == contentId, cancellationToken);
+
+        if (item is null)
+            return;
+
+        item.Tags.Clear();
+
+        if (tagIds.Count > 0)
+        {
+            var tags = await _db.Tags
+                .Where(t => tagIds.Contains(t.Id))
+                .ToListAsync(cancellationToken);
+
+            foreach (var tag in tags)
+                item.Tags.Add(tag);
+        }
+
         await _db.SaveChangesAsync(cancellationToken);
     }
 
@@ -288,7 +375,7 @@ public class ContentRepository : IContentRepository
     }
 
     public Task<int> CountContentByTagAsync(int tagId, CancellationToken cancellationToken = default) =>
-        _db.ContentItems.CountAsync(c => c.TagId == tagId, cancellationToken);
+        _db.ContentItems.CountAsync(c => c.Tags.Any(t => t.Id == tagId), cancellationToken);
 
     public async Task<IReadOnlyList<SocialAccount>> GetAccountsAsync(CancellationToken cancellationToken = default) =>
         await _db.SocialAccounts.OrderBy(a => a.Platform).ThenBy(a => a.Username)

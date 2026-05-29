@@ -26,7 +26,13 @@ public class AppDbContext : DbContext
         {
             e.HasKey(x => x.Id);
             e.HasMany(x => x.MediaFiles).WithOne().HasForeignKey(m => m.ContentItemId).OnDelete(DeleteBehavior.Cascade);
-            e.HasOne(x => x.Tag).WithMany().HasForeignKey(x => x.TagId).OnDelete(DeleteBehavior.SetNull);
+            e.HasMany(x => x.Tags)
+                .WithMany()
+                .UsingEntity<Dictionary<string, object>>(
+                    "ContentItemTags",
+                    j => j.HasOne<ContentTag>().WithMany().HasForeignKey("TagsId"),
+                    j => j.HasOne<ContentItem>().WithMany().HasForeignKey("ContentItemId"),
+                    j => j.HasKey("ContentItemId", "TagsId"));
         });
 
         modelBuilder.Entity<MediaFile>(e => e.HasKey(x => x.Id));

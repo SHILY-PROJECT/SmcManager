@@ -36,9 +36,7 @@ public class ContentItem
     /// <summary>Относительный путь папки: platform/account/postId_datetime.</summary>
     public string? StorageRelativePath { get; set; }
 
-    public int? TagId { get; set; }
-
-    public ContentTag? Tag { get; set; }
+    public List<ContentTag> Tags { get; set; } = [];
 
     public List<MediaFile> MediaFiles { get; set; } = [];
 }

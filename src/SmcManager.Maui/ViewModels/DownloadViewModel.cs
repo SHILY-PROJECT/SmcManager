@@ -109,8 +109,7 @@ public partial class DownloadViewModel : ObservableObject,
 
     public bool HasNoRecentDownloads => RecentDownloads.Count == 0;
 
-    [ObservableProperty]
-    private ContentTag? _selectedTag;
+    private readonly HashSet<int> _selectedTagIds = [];
 
     public ObservableCollection<TagChipViewModel> TagChips { get; } = [];
 
@@ -167,7 +166,7 @@ public partial class DownloadViewModel : ObservableObject,
     private string? _previewThumbnail;
 
     [ObservableProperty]
-    private ImageSource? _previewImageSource;
+    private string? _previewImageFile;
 
     [ObservableProperty]
     private string? _previewPlatformIconFile;
@@ -251,12 +250,6 @@ public partial class DownloadViewModel : ObservableObject,
     partial void OnIsNewTagPanelVisibleChanged(bool value) =>
         OnPropertyChanged(nameof(NewTagPanelToggleText));
 
-    partial void OnSelectedTagChanged(ContentTag? value)
-    {
-        SyncTagChipSelection();
-        OnPropertyChanged(nameof(IsNoTagSelected));
-    }
-
     [RelayCommand]
     private async Task DownloadAsync()
     {
@@ -327,10 +320,22 @@ public partial class DownloadViewModel : ObservableObject,
     private void SelectTagColor(string color) => SelectedTagColor = color;
 
     [RelayCommand]
-    private void SelectTagChip(TagChipViewModel chip) => SelectedTag = chip.Tag;
+    private void ToggleTagChip(TagChipViewModel chip)
+    {
+        if (_selectedTagIds.Contains(chip.Tag.Id))
+            _selectedTagIds.Remove(chip.Tag.Id);
+        else
+            _selectedTagIds.Add(chip.Tag.Id);
+
+        SyncTagChipSelection();
+    }
 
     [RelayCommand]
-    private void ClearTag() => SelectedTag = null;
+    private void ClearTag()
+    {
+        _selectedTagIds.Clear();
+        SyncTagChipSelection();
+    }
 
     [RelayCommand]
     private async Task AddTagAsync()
@@ -345,7 +350,8 @@ public partial class DownloadViewModel : ObservableObject,
         NewTagName = string.Empty;
         IsNewTagPanelVisible = false;
         await LoadTagsAsync();
-        SelectedTag = tag;
+        if (tag is not null)
+            _selectedTagIds.Add(tag.Id);
         SyncTagChipSelection();
         WeakReferenceMessenger.Default.Send(new TagsChangedMessage());
         NewTagStatusMessage = $"Тег «{tag!.Name}» добавлен.";
@@ -454,11 +460,7 @@ public partial class DownloadViewModel : ObservableObject,
         {
             if (!ct.IsCancellationRequested)
             {
-                await MainThread.InvokeOnMainThreadAsync(() =>
-                {
-                    IsLoadingPreview = false;
-                    IsLoadingQualities = false;
-                });
+                await MainThread.InvokeOnMainThreadAsync(FinishLinkMetadataLoading);
             }
         }
     }
@@ -539,11 +541,7 @@ public partial class DownloadViewModel : ObservableObject,
         {
             if (!ct.IsCancellationRequested)
             {
-                await MainThread.InvokeOnMainThreadAsync(() =>
-                {
-                    IsLoadingPreview = false;
-                    IsLoadingQualities = false;
-                });
+                await MainThread.InvokeOnMainThreadAsync(FinishLinkMetadataLoading);
             }
         }
     }
@@ -560,7 +558,6 @@ public partial class DownloadViewModel : ObservableObject,
             PreviewThumbnail = preview.ThumbnailUrl;
             ShowLinkPreview = !string.IsNullOrWhiteSpace(PreviewTitle)
                               || !string.IsNullOrWhiteSpace(PreviewThumbnail);
-            _ = LoadPreviewImageAsync(preview.ThumbnailUrl);
 
             if (ShowLinkPreview)
             {
@@ -668,16 +665,25 @@ public partial class DownloadViewModel : ObservableObject,
         _previewImageCts = new CancellationTokenSource();
         var ct = _previewImageCts.Token;
 
-        await MainThread.InvokeOnMainThreadAsync(() => PreviewImageSource = null);
+        await MainThread.InvokeOnMainThreadAsync(() => PreviewImageFile = null);
 
         if (string.IsNullOrWhiteSpace(url))
             return;
 
-        var source = await _remoteImageCache.GetImageSourceAsync(url, ct).ConfigureAwait(false);
+        var path = await _remoteImageCache.GetCachedFilePathAsync(url, ct).ConfigureAwait(false);
         if (ct.IsCancellationRequested)
             return;
 
-        await MainThread.InvokeOnMainThreadAsync(() => PreviewImageSource = source);
+        await MainThread.InvokeOnMainThreadAsync(() => PreviewImageFile = path);
+    }
+
+    private void FinishLinkMetadataLoading()
+    {
+        IsLoadingPreview = false;
+        IsLoadingQualities = false;
+
+        if (ShowLinkPreview && !string.IsNullOrWhiteSpace(PreviewThumbnail))
+            _ = LoadPreviewImageAsync(PreviewThumbnail);
     }
 
     private void CancelPendingUrlWork()
@@ -738,7 +744,7 @@ public partial class DownloadViewModel : ObservableObject,
         PreviewTitle = null;
         PreviewAuthor = null;
         PreviewThumbnail = null;
-        PreviewImageSource = null;
+        PreviewImageFile = null;
         PreviewPlatformIconFile = null;
         PreviewAuthStatusIconFile = null;
         PreviewUsesAuthenticatedAccount = false;
@@ -887,7 +893,7 @@ public partial class DownloadViewModel : ObservableObject,
     private async Task LoadTagsAsync()
     {
         var tags = await _repository.GetTagsAsync();
-        var selectedId = SelectedTag?.Id;
+        var selectedIds = _selectedTagIds.ToHashSet();
         Tags.Clear();
         TagChips.Clear();
         foreach (var tag in tags)
@@ -896,16 +902,19 @@ public partial class DownloadViewModel : ObservableObject,
             TagChips.Add(new TagChipViewModel(tag));
         }
 
-        SelectedTag = selectedId is int id
-            ? Tags.FirstOrDefault(t => t.Id == id)
-            : SelectedTag;
+        _selectedTagIds.Clear();
+        foreach (var id in selectedIds.Where(id => Tags.Any(t => t.Id == id)))
+            _selectedTagIds.Add(id);
+
         SyncTagChipSelection();
     }
 
     private void SyncTagChipSelection()
     {
         foreach (var chip in TagChips)
-            chip.IsSelected = SelectedTag is not null && chip.Tag.Id == SelectedTag.Id;
+            chip.IsSelected = _selectedTagIds.Contains(chip.Tag.Id);
+
+        OnPropertyChanged(nameof(IsNoTagSelected));
     }
 
     private async Task RefreshRecentAsync()
@@ -975,20 +984,20 @@ public partial class DownloadViewModel : ObservableObject,
 
     public ObservableCollection<ContentTag> Tags { get; } = [];
 
-    public bool IsNoTagSelected => SelectedTag is null;
+    public bool IsNoTagSelected => _selectedTagIds.Count == 0;
 
     private static DownloadRequest BuildDownloadRequest(
         string normalizedUrl,
         AppUserSettings appSettings,
         bool useAccount,
         int? accountId,
-        int? tagId,
+        IReadOnlyList<int> tagIds,
         string? qualityFormatId)
     {
         return new DownloadRequest
         {
             Url = normalizedUrl,
-            TagId = tagId,
+            TagIds = tagIds,
             SocialAccountId = accountId,
             UseSocialAccount = accountId.HasValue || useAccount,
             UsePostedDateForFolder = appSettings.UsePostedDateForFolder,
@@ -1003,14 +1012,14 @@ public partial class DownloadViewModel : ObservableObject,
         int? accountId,
         AppUserSettings appSettings)
     {
-        var tagId = SelectedTag?.Id;
+        var tagIds = _selectedTagIds.ToList();
         var qualityId = SelectedQuality?.Id;
         var request = BuildDownloadRequest(
             normalizedUrl,
             appSettings,
             useAccount,
             accountId,
-            tagId,
+            tagIds,
             qualityId);
 
         try

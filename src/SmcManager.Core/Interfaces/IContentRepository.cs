@@ -27,7 +27,7 @@ public interface IContentRepository
 
     Task DeleteContentAsync(int contentId, CancellationToken cancellationToken = default);
 
-    Task AssignTagAsync(int contentId, int? tagId, CancellationToken cancellationToken = default);
+    Task AssignTagsAsync(int contentId, IReadOnlyList<int> tagIds, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<ContentTag>> GetTagsAsync(CancellationToken cancellationToken = default);
 
