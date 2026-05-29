@@ -2,6 +2,7 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:SmcManager.Maui.ViewModels"
+             xmlns:models="clr-namespace:SmcManager.Maui.Models"
              xmlns:views="clr-namespace:SmcManager.Maui.Views"
              xmlns:controls="clr-namespace:SmcManager.Maui.Views.Controls"
              xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
@@ -104,21 +105,42 @@
                    FontAttributes="Bold"
                    TextColor="{DynamicResource TextPrimary}" />
 
-            <CollectionView ItemsSource="{Binding Tags}"
-                            HeightRequest="32"
-                            IsVisible="{Binding HasTags}"
-                            SelectionMode="None">
-                <CollectionView.ItemsLayout>
-                    <LinearItemsLayout Orientation="Horizontal" ItemSpacing="6" />
-                </CollectionView.ItemsLayout>
-                <CollectionView.ItemTemplate>
-                    <DataTemplate x:DataType="vm:ContentTagDisplayModel">
-                        <controls:TagChipView Text="{Binding Name}"
-                                              ColorHex="{Binding ColorHex}"
-                                              IsSelected="False" />
-                    </DataTemplate>
-                </CollectionView.ItemTemplate>
-            </CollectionView>
+            <toolkit:Expander IsExpanded="True"
+                              IsVisible="{Binding IsContentLoaded}">
+                <toolkit:Expander.Header>
+                    <controls:SettingsSectionHeaderView Icon="🏷️"
+                                                        Title="Теги" />
+                </toolkit:Expander.Header>
+                <Border Style="{StaticResource CardBorderStyle}"
+                        Margin="0,8,0,0"
+                        Padding="4,4,4,10">
+                    <CollectionView x:Name="TagChipsView"
+                                    ItemsSource="{Binding TagChips}"
+                                    HeightRequest="45"
+                                    SelectionMode="None">
+                        <CollectionView.ItemsLayout>
+                            <LinearItemsLayout Orientation="Horizontal"
+                                               ItemSpacing="6" />
+                        </CollectionView.ItemsLayout>
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="models:TagChipViewModel">
+                                <controls:TagChipView Text="{Binding Name}"
+                                                      ColorHex="{Binding ColorHex}"
+                                                      IsSelected="{Binding IsSelected}"
+                                                      SelectCommand="{Binding Source={RelativeSource AncestorType={x:Type vm:ContentDetailViewModel}}, Path=ToggleContentTagCommand}"
+                                                      SelectParameter="{Binding .}"
+                                                      VerticalOptions="Center" />
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                        <CollectionView.EmptyView>
+                            <Label Text="Нет тегов — создайте их на вкладке «Теги»"
+                                   TextColor="{DynamicResource TextMuted}"
+                                   FontSize="13"
+                                   LineBreakMode="WordWrap" />
+                        </CollectionView.EmptyView>
+                    </CollectionView>
+                </Border>
+            </toolkit:Expander>
 
             <toolkit:Expander IsExpanded="True"
                               IsVisible="{Binding IsContentLoaded}">

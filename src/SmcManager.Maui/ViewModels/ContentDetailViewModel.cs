@@ -9,6 +9,7 @@ using SmcManager.Core.Interfaces;
 using SmcManager.Core.Models;
 using SmcManager.Core.Services;
 using SmcManager.Maui.Messages;
+using SmcManager.Maui.Models;
 using SmcManager.Maui.Services;
 
 namespace SmcManager.Maui.ViewModels;
@@ -17,7 +18,7 @@ namespace SmcManager.Maui.ViewModels;
 /// Просмотр скачанного поста: медиа, описание, открытие в проводнике.
 /// </summary>
 [QueryProperty(nameof(ContentId), "contentId")]
-public partial class ContentDetailViewModel : ObservableObject, IQueryAttributable
+public partial class ContentDetailViewModel : ObservableObject, IQueryAttributable, IRecipient<TagsChangedMessage>
 {
     private readonly IContentRepository _repository;
     private int _loadedContentId;
@@ -41,7 +42,10 @@ public partial class ContentDetailViewModel : ObservableObject, IQueryAttributab
         _linkLauncher = linkLauncher;
         _storagePaths = storagePaths;
         _settings = settings;
+        WeakReferenceMessenger.Default.Register(this);
     }
+
+    public void Receive(TagsChangedMessage message) => _ = LoadTagEditorAsync();
 
     public string ContentId { get; set; } = string.Empty;
 
@@ -56,9 +60,7 @@ public partial class ContentDetailViewModel : ObservableObject, IQueryAttributab
 
     public ObservableCollection<MediaSlideViewModel> MediaSlides { get; } = [];
 
-    public ObservableCollection<ContentTagDisplayModel> Tags { get; } = [];
-
-    public bool HasTags => Tags.Count > 0;
+    public ObservableCollection<TagChipViewModel> TagChips { get; } = [];
 
     [ObservableProperty]
     private string _authorTitle = string.Empty;
@@ -326,6 +328,27 @@ public partial class ContentDetailViewModel : ObservableObject, IQueryAttributab
     private void CancelCommentEdit() => IsEditingComment = false;
 
     [RelayCommand]
+    private async Task ToggleContentTagAsync(TagChipViewModel chip)
+    {
+        if (_content is null)
+            return;
+
+        var tagIds = _content.Tags.Select(t => t.Id).ToHashSet();
+        if (tagIds.Contains(chip.Tag.Id))
+            tagIds.Remove(chip.Tag.Id);
+        else
+            tagIds.Add(chip.Tag.Id);
+
+        await _repository.AssignTagsAsync(_content.Id, tagIds.ToList());
+
+        var updated = await _repository.GetContentByIdAsync(_content.Id);
+        if (updated is not null)
+            _content = updated;
+
+        SyncTagChipSelection();
+    }
+
+    [RelayCommand]
     private async Task OpenInExplorerAsync()
     {
         var slide = GetCurrentSlide();
@@ -438,16 +461,7 @@ public partial class ContentDetailViewModel : ObservableObject, IQueryAttributab
         IsContentLoaded = true;
         OnPropertyChanged(nameof(ShowCaptionPlaceholder));
 
-        Tags.Clear();
-        foreach (var tag in item.Tags.OrderBy(t => t.Name, StringComparer.OrdinalIgnoreCase))
-        {
-            Tags.Add(new ContentTagDisplayModel
-            {
-                Name = tag.Name,
-                ColorHex = tag.ColorHex
-            });
-        }
-        OnPropertyChanged(nameof(HasTags));
+        await LoadTagEditorAsync();
 
         var downloadsRoot = _storagePaths.DownloadsPath;
         var thumbnailPath = ContentThumbnailHelper.ResolveThumbnailPath(item, downloadsRoot);
@@ -486,4 +500,32 @@ public partial class ContentDetailViewModel : ObservableObject, IQueryAttributab
 
     private void UpdateSlideIndicator() =>
         SlideIndicator = HasMultipleSlides ? $"{CurrentSlideIndex + 1} / {MediaSlides.Count}" : string.Empty;
+
+    private async Task LoadTagEditorAsync()
+    {
+        if (_content is null)
+            return;
+
+        var allTags = await _repository.GetTagsAsync();
+        var assignedIds = _content.Tags.Select(t => t.Id).ToHashSet();
+
+        TagChips.Clear();
+        foreach (var tag in allTags)
+        {
+            TagChips.Add(new TagChipViewModel(tag)
+            {
+                IsSelected = assignedIds.Contains(tag.Id)
+            });
+        }
+    }
+
+    private void SyncTagChipSelection()
+    {
+        if (_content is null)
+            return;
+
+        var assignedIds = _content.Tags.Select(t => t.Id).ToHashSet();
+        foreach (var chip in TagChips)
+            chip.IsSelected = assignedIds.Contains(chip.Tag.Id);
+    }
 }
