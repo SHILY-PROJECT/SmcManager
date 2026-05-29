@@ -76,6 +76,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<IFileExplorerService, FileExplorerService>();
         builder.Services.AddSingleton<ILinkLauncherService, LinkLauncherService>();
         builder.Services.AddSingleton<TagCreationService>();
+        builder.Services.AddSingleton<TagListService>();
         builder.Services.AddSingleton<TagColorPickerService>();
         builder.Services.AddSingleton<BottomToastService>();
         builder.Services.AddSingleton<RemoteImageCache>();

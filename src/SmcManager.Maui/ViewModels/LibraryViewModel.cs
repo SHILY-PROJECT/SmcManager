@@ -11,16 +11,24 @@ namespace SmcManager.Maui.ViewModels;
 /// <summary>
 /// Вкладка «Весь контент» — список всех скачанных материалов.
 /// </summary>
-public partial class LibraryViewModel : ObservableObject, IRecipient<ContentDeletedMessage>
+public partial class LibraryViewModel : ObservableObject,
+    IRecipient<ContentDeletedMessage>,
+    IRecipient<TagSortChangedMessage>
 {
     private readonly IContentRepository _repository;
     private readonly IAppStoragePaths _storagePaths;
+    private readonly TagListService _tagList;
 
-    public LibraryViewModel(IContentRepository repository, IAppStoragePaths storagePaths)
+    public LibraryViewModel(
+        IContentRepository repository,
+        IAppStoragePaths storagePaths,
+        TagListService tagList)
     {
         _repository = repository;
         _storagePaths = storagePaths;
-        WeakReferenceMessenger.Default.Register(this);
+        _tagList = tagList;
+        WeakReferenceMessenger.Default.Register<ContentDeletedMessage>(this);
+        WeakReferenceMessenger.Default.Register<TagSortChangedMessage>(this);
     }
 
     public ObservableCollection<ContentItemDisplayModel> Items { get; } = [];
@@ -40,7 +48,13 @@ public partial class LibraryViewModel : ObservableObject, IRecipient<ContentDele
             var items = await _repository.GetAllContentAsync();
             Items.Clear();
             foreach (var item in items)
-                Items.Add(ContentItemDisplayModel.FromEntity(item, _storagePaths.DownloadsPath));
+            {
+                var orderedTags = await _tagList.SortTagsAsync(item.Tags);
+                Items.Add(ContentItemDisplayModel.FromEntity(
+                    item,
+                    _storagePaths.DownloadsPath,
+                    orderedTags));
+            }
         }
         finally
         {
@@ -59,4 +73,6 @@ public partial class LibraryViewModel : ObservableObject, IRecipient<ContentDele
     }
 
     public void Receive(ContentDeletedMessage message) => _ = RefreshAsync();
+
+    public void Receive(TagSortChangedMessage message) => _ = RefreshAsync();
 }

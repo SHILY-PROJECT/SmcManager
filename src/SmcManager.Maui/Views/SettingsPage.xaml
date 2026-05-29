@@ -123,6 +123,28 @@
                     </Border>
                 </toolkit:Expander>
 
+                <toolkit:Expander IsExpanded="{Binding IsTagsSectionExpanded}">
+                    <toolkit:Expander.Header>
+                        <controls:SettingsSectionHeaderView Icon="🏷️"
+                                                            Title="Теги" />
+                    </toolkit:Expander.Header>
+                    <Border Style="{StaticResource CardBorderStyle}" Margin="0,8,0,0">
+                        <VerticalStackLayout Spacing="12" Padding="4">
+                            <Label Text="Порядок тегов в фильтрах на вкладках «Скачать», «Группы», «Теги» и на карточках контента."
+                                   Style="{StaticResource SectionSubtitleStyle}"
+                                   LineBreakMode="WordWrap" />
+                            <Label Text="Сортировка"
+                                   Style="{StaticResource SectionSubtitleStyle}" />
+                            <Border Style="{StaticResource InputBorderStyle}">
+                                <Picker ItemsSource="{Binding TagSortOptions}"
+                                        ItemDisplayBinding="{Binding Title}"
+                                        SelectedItem="{Binding SelectedTagSortOption}"
+                                        BackgroundColor="Transparent" />
+                            </Border>
+                        </VerticalStackLayout>
+                    </Border>
+                </toolkit:Expander>
+
                 <toolkit:Expander IsExpanded="{Binding IsAccountsSectionExpanded}">
                     <toolkit:Expander.Header>
                         <controls:SettingsSectionHeaderView Icon="👥"

@@ -23,7 +23,7 @@ public partial class App : Application
         var themeService = _services.GetRequiredService<ThemeService>();
         themeService.InitializeAsync().GetAwaiter().GetResult();
 
-        _ = _repository.InitializeAsync();
+        _repository.InitializeAsync().GetAwaiter().GetResult();
 
         // AppShell создаём после InitializeComponent(), иначе StaticResource из Colors.xaml ещё недоступны
         var shell = _services.GetRequiredService<AppShell>();

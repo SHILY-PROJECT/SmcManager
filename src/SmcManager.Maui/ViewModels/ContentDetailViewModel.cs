@@ -19,7 +19,7 @@ namespace SmcManager.Maui.ViewModels;
 /// Просмотр скачанного поста: медиа, описание, открытие в проводнике.
 /// </summary>
 [QueryProperty(nameof(ContentId), "contentId")]
-public partial class ContentDetailViewModel : ObservableObject, IQueryAttributable, IRecipient<TagsChangedMessage>
+public partial class ContentDetailViewModel : ObservableObject, IQueryAttributable, IRecipient<TagsChangedMessage>, IRecipient<TagSortChangedMessage>
 {
     private readonly IContentRepository _repository;
     private int _loadedContentId;
@@ -27,6 +27,7 @@ public partial class ContentDetailViewModel : ObservableObject, IQueryAttributab
     private readonly ILinkLauncherService _linkLauncher;
     private readonly IAppStoragePaths _storagePaths;
     private readonly ISettingsService _settings;
+    private readonly TagListService _tagList;
 
     private ContentItem? _content;
     private DateTime _enteredAtUtc;
@@ -38,17 +39,22 @@ public partial class ContentDetailViewModel : ObservableObject, IQueryAttributab
         IFileExplorerService fileExplorer,
         ILinkLauncherService linkLauncher,
         IAppStoragePaths storagePaths,
-        ISettingsService settings)
+        ISettingsService settings,
+        TagListService tagList)
     {
         _repository = repository;
         _fileExplorer = fileExplorer;
         _linkLauncher = linkLauncher;
         _storagePaths = storagePaths;
         _settings = settings;
-        WeakReferenceMessenger.Default.Register(this);
+        _tagList = tagList;
+        WeakReferenceMessenger.Default.Register<TagsChangedMessage>(this);
+        WeakReferenceMessenger.Default.Register<TagSortChangedMessage>(this);
     }
 
     public void Receive(TagsChangedMessage message) => _ = LoadTagEditorAsync();
+
+    public void Receive(TagSortChangedMessage message) => _ = LoadTagEditorAsync();
 
     public string ContentId { get; set; } = string.Empty;
 
@@ -592,7 +598,7 @@ public partial class ContentDetailViewModel : ObservableObject, IQueryAttributab
         if (_content is null)
             return;
 
-        var allTags = await _repository.GetTagsAsync().ConfigureAwait(false);
+        var allTags = await _tagList.GetSortedTagsAsync().ConfigureAwait(false);
         var assignedIds = _content.Tags.Select(t => t.Id).ToHashSet();
 
         await MainThread.InvokeOnMainThreadAsync(() =>

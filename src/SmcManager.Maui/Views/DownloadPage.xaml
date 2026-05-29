@@ -180,6 +180,27 @@
                                 <Label Text="Новый тег"
                                        Style="{StaticResource SectionTitleStyle}"
                                        FontSize="18" />
+                                <Label Text="Быстрые эмодзи"
+                                       Style="{StaticResource SectionSubtitleStyle}" />
+                                <CollectionView ItemsSource="{Binding EmojiSuggestions}"
+                                                HeightRequest="44"
+                                                SelectionMode="None">
+                                    <CollectionView.ItemsLayout>
+                                        <LinearItemsLayout Orientation="Horizontal" ItemSpacing="6" />
+                                    </CollectionView.ItemsLayout>
+                                    <CollectionView.ItemTemplate>
+                                        <DataTemplate x:DataType="x:String">
+                                            <Button Text="{Binding .}"
+                                                    Style="{StaticResource SecondaryButtonStyle}"
+                                                    FontSize="20"
+                                                    Padding="10,4"
+                                                    MinimumWidthRequest="44"
+                                                    MinimumHeightRequest="40"
+                                                    Command="{Binding Source={RelativeSource AncestorType={x:Type vm:DownloadViewModel}}, Path=AppendEmojiCommand}"
+                                                    CommandParameter="{Binding .}" />
+                                        </DataTemplate>
+                                    </CollectionView.ItemTemplate>
+                                </CollectionView>
                                 <Grid ColumnDefinitions="*,Auto,Auto"
                                       ColumnSpacing="8">
                                     <Border Grid.Column="0"

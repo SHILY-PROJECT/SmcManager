@@ -38,24 +38,31 @@ public class ContentItemDisplayModel
 
     public DateTime DownloadedAt { get; init; }
 
-    public static ContentItemDisplayModel FromEntity(ContentItem item, string downloadsRoot) => new()
+    public static ContentItemDisplayModel FromEntity(
+        ContentItem item,
+        string downloadsRoot,
+        IReadOnlyList<ContentTag>? orderedTags = null)
     {
-        Id = item.Id,
-        AuthorUsername = item.AuthorUsername,
-        CaptionPreview = Truncate(item.Caption, 120),
-        CommentPreview = Truncate(item.UserComment, 80),
-        KindLabel = item.Kind.ToString(),
-        PlatformLabel = item.Platform.ToString(),
-        Platform = item.Platform,
-        PlatformIconFile = SocialPlatformIcons.GetIconFileName(item.Platform),
-        Tags = item.Tags
-            .OrderBy(t => t.Name, StringComparer.OrdinalIgnoreCase)
-            .Select(t => new ContentTagDisplayModel { Name = t.Name, ColorHex = t.ColorHex })
-            .ToList(),
-        ThumbnailPath = ContentThumbnailHelper.ResolveThumbnailPath(item, downloadsRoot),
-        MediaCount = item.MediaFiles.Count,
-        DownloadedAt = item.DownloadedAt.ToLocalTime()
-    };
+        var tags = orderedTags ?? item.Tags;
+
+        return new()
+        {
+            Id = item.Id,
+            AuthorUsername = item.AuthorUsername,
+            CaptionPreview = Truncate(item.Caption, 120),
+            CommentPreview = Truncate(item.UserComment, 80),
+            KindLabel = item.Kind.ToString(),
+            PlatformLabel = item.Platform.ToString(),
+            Platform = item.Platform,
+            PlatformIconFile = SocialPlatformIcons.GetIconFileName(item.Platform),
+            Tags = tags
+                .Select(t => new ContentTagDisplayModel { Name = t.Name, ColorHex = t.ColorHex })
+                .ToList(),
+            ThumbnailPath = ContentThumbnailHelper.ResolveThumbnailPath(item, downloadsRoot),
+            MediaCount = item.MediaFiles.Count,
+            DownloadedAt = item.DownloadedAt.ToLocalTime()
+        };
+    }
 
     private static string? Truncate(string? text, int max) =>
         string.IsNullOrEmpty(text) ? null : text.Length <= max ? text : text[..max] + "…";

@@ -12,23 +12,30 @@ namespace SmcManager.Maui.ViewModels;
 /// <summary>
 /// Управление пользовательскими тегами.
 /// </summary>
-public partial class TagsViewModel : ObservableObject
+public partial class TagsViewModel : ObservableObject,
+    IRecipient<TagSortChangedMessage>
 {
     private readonly IContentRepository _repository;
     private readonly TagCreationService _tagCreation;
+    private readonly TagListService _tagList;
     private readonly BottomToastService _toast;
 
     public TagsViewModel(
         IContentRepository repository,
         TagCreationService tagCreation,
+        TagListService tagList,
         BottomToastService toast)
     {
         _repository = repository;
         _tagCreation = tagCreation;
+        _tagList = tagList;
         _toast = toast;
+        WeakReferenceMessenger.Default.Register<TagSortChangedMessage>(this);
     }
 
     public ObservableCollection<TagRowViewModel> Tags { get; } = [];
+
+    public IReadOnlyList<string> EmojiSuggestions { get; } = TagEmojiLibrary.Suggested;
 
     [ObservableProperty]
     private string _newTagName = string.Empty;
@@ -39,8 +46,24 @@ public partial class TagsViewModel : ObservableObject
     [ObservableProperty]
     private string? _statusMessage;
 
+    public void Receive(TagSortChangedMessage message) => _ = LoadAsync();
+
     [RelayCommand]
     private async Task AppearingAsync() => await LoadAsync();
+
+    [RelayCommand]
+    private void AppendEmoji(string emoji)
+    {
+        if (string.IsNullOrWhiteSpace(emoji))
+            return;
+
+        var trimmed = NewTagName.Trim();
+        if (trimmed.StartsWith(emoji, StringComparison.Ordinal))
+            return;
+
+        var combined = string.IsNullOrWhiteSpace(trimmed) ? $"{emoji} " : $"{emoji} {trimmed}";
+        NewTagName = combined.Length <= 32 ? combined : NewTagName;
+    }
 
     [RelayCommand]
     private async Task AddTagAsync()
@@ -120,11 +143,12 @@ public partial class TagsViewModel : ObservableObject
 
     private async Task LoadAsync()
     {
-        var tags = await _repository.GetTagsAsync();
+        var tags = await _tagList.GetSortedTagsAsync();
+        var usageCounts = await _repository.GetTagUsageCountsAsync();
         Tags.Clear();
         foreach (var tag in tags)
         {
-            var usage = await _repository.CountContentByTagAsync(tag.Id);
+            usageCounts.TryGetValue(tag.Id, out var usage);
             Tags.Add(new TagRowViewModel(tag, usage));
         }
     }

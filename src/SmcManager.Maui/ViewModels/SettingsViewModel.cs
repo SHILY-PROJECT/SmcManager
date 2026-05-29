@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 using SmcManager.Core.Enums;
 using SmcManager.Core.Interfaces;
 using SmcManager.Core.Models;
@@ -9,6 +10,7 @@ using SmcManager.Core.Services;
 using SmcManager.Infrastructure.Services;
 using SmcManager.Maui.Models;
 using SmcManager.Maui.Services;
+using SmcManager.Maui.Messages;
 
 namespace SmcManager.Maui.ViewModels;
 
@@ -103,6 +105,7 @@ public partial class SettingsViewModel : ObservableObject
 
     private bool _suppressThemeChange;
     private bool _suppressSectionPersistence;
+    private bool _suppressTagSortChange;
 
     [ObservableProperty]
     private bool _isAppearanceSectionExpanded = true;
@@ -112,6 +115,9 @@ public partial class SettingsViewModel : ObservableObject
 
     [ObservableProperty]
     private bool _isDownloadSectionExpanded = true;
+
+    [ObservableProperty]
+    private bool _isTagsSectionExpanded = true;
 
     [ObservableProperty]
     private bool _isAccountsSectionExpanded = true;
@@ -128,6 +134,17 @@ public partial class SettingsViewModel : ObservableObject
 
     public string AddAccountPanelToggleText =>
         IsAddAccountPanelVisible ? "Скрыть форму" : "+ Добавить аккаунт";
+
+    public IReadOnlyList<TagSortOption> TagSortOptions { get; } =
+    [
+        new() { Mode = TagSortMode.Default, Title = "По умолчанию" },
+        new() { Mode = TagSortMode.UsageCount, Title = "По количеству использования" },
+        new() { Mode = TagSortMode.DateAdded, Title = "По дате добавления" },
+        new() { Mode = TagSortMode.Name, Title = "По алфавиту" }
+    ];
+
+    [ObservableProperty]
+    private TagSortOption? _selectedTagSortOption;
 
     public IReadOnlyList<int> RecentCountOptions { get; } = AppUserSettings.AllowedRecentCounts;
 
@@ -160,6 +177,11 @@ public partial class SettingsViewModel : ObservableObject
         UsePostedDateForFolder = appSettings.UsePostedDateForFolder;
         PreferDownloadWithoutAccount = appSettings.PreferDownloadWithoutAccount;
 
+        _suppressTagSortChange = true;
+        SelectedTagSortOption = TagSortOptions.FirstOrDefault(o => o.Mode == appSettings.TagSortMode)
+                                ?? TagSortOptions[0];
+        _suppressTagSortChange = false;
+
         SelectedStorageOption = StorageLocationOptions.FirstOrDefault(o => o.Location == appSettings.StorageLocation)
                                 ?? StorageLocationOptions[0];
         CurrentDataRootDisplay = _storagePaths.LocationDescription;
@@ -183,6 +205,7 @@ public partial class SettingsViewModel : ObservableObject
         IsAppearanceSectionExpanded = state.IsExpanded(SettingsSectionIds.Appearance);
         IsStorageSectionExpanded = state.IsExpanded(SettingsSectionIds.Storage);
         IsDownloadSectionExpanded = state.IsExpanded(SettingsSectionIds.Download);
+        IsTagsSectionExpanded = state.IsExpanded(SettingsSectionIds.Tags);
         IsAccountsSectionExpanded = state.IsExpanded(SettingsSectionIds.Accounts);
         IsProxySectionExpanded = state.IsExpanded(SettingsSectionIds.Proxy);
         _suppressSectionPersistence = false;
@@ -206,11 +229,34 @@ public partial class SettingsViewModel : ObservableObject
     partial void OnIsDownloadSectionExpandedChanged(bool value) =>
         _ = PersistSectionExpandedAsync(SettingsSectionIds.Download, value);
 
+    partial void OnIsTagsSectionExpandedChanged(bool value) =>
+        _ = PersistSectionExpandedAsync(SettingsSectionIds.Tags, value);
+
     partial void OnIsAccountsSectionExpandedChanged(bool value) =>
         _ = PersistSectionExpandedAsync(SettingsSectionIds.Accounts, value);
 
     partial void OnIsProxySectionExpandedChanged(bool value) =>
         _ = PersistSectionExpandedAsync(SettingsSectionIds.Proxy, value);
+
+    partial void OnSelectedTagSortOptionChanged(TagSortOption? value)
+    {
+        if (_suppressTagSortChange || value is null)
+            return;
+
+        _ = SaveTagSortAsync(value.Mode);
+    }
+
+    private async Task SaveTagSortAsync(TagSortMode mode)
+    {
+        var current = await _settings.GetAppSettingsAsync();
+        if (current.TagSortMode == mode)
+            return;
+
+        current.TagSortMode = mode;
+        await _settings.SaveAppSettingsAsync(current);
+        WeakReferenceMessenger.Default.Send(new TagSortChangedMessage());
+        StatusMessage = "Сортировка тегов сохранена.";
+    }
 
     [RelayCommand]
     private async Task SaveAppSettingsAsync()

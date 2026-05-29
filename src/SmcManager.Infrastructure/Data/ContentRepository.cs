@@ -101,6 +101,56 @@ public class ContentRepository : IContentRepository
 
         await MigrateLegacySessionTokensAsync(cancellationToken);
         await MigrateContentItemTagsAsync(cancellationToken);
+        await MigrateContentTagsMetadataAsync(cancellationToken);
+    }
+
+    private async Task MigrateContentTagsMetadataAsync(CancellationToken cancellationToken)
+    {
+        var columnNames = await GetTableColumnNamesAsync("Tags", cancellationToken);
+        if (columnNames.Count == 0)
+            return;
+
+        if (!columnNames.Contains("SortOrder", StringComparer.OrdinalIgnoreCase))
+        {
+            await _db.Database.ExecuteSqlRawAsync(
+                "ALTER TABLE Tags ADD COLUMN SortOrder INTEGER NOT NULL DEFAULT 1000;",
+                cancellationToken);
+        }
+
+        if (!columnNames.Contains("CreatedAt", StringComparer.OrdinalIgnoreCase))
+        {
+            await _db.Database.ExecuteSqlRawAsync(
+                "ALTER TABLE Tags ADD COLUMN CreatedAt TEXT NULL;",
+                cancellationToken);
+        }
+
+        var utcNow = DateTime.UtcNow.ToString("O");
+        await _db.Database.ExecuteSqlRawAsync(
+            """
+            UPDATE Tags
+            SET CreatedAt = {0}
+            WHERE CreatedAt IS NULL OR CreatedAt = '';
+            """,
+            [utcNow],
+            cancellationToken);
+    }
+
+    private async Task<IReadOnlyList<string>> GetTableColumnNamesAsync(
+        string tableName,
+        CancellationToken cancellationToken)
+    {
+        var connection = _db.Database.GetDbConnection();
+        if (connection.State != System.Data.ConnectionState.Open)
+            await connection.OpenAsync(cancellationToken);
+
+        var columnNames = new List<string>();
+        await using var command = connection.CreateCommand();
+        command.CommandText = $"PRAGMA table_info('{tableName}');";
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+            columnNames.Add(reader.GetString(1));
+
+        return columnNames;
     }
 
     private async Task MigrateContentItemTagsAsync(CancellationToken cancellationToken)
@@ -197,19 +247,56 @@ public class ContentRepository : IContentRepository
 
     private async Task EnsureDefaultTagsAsync(CancellationToken cancellationToken)
     {
-        var existingNames = await _db.Tags
-            .Select(t => t.Name)
-            .ToListAsync(cancellationToken);
+        await RemoveLegacyDefaultTagsAsync(cancellationToken);
 
-        var existingSet = new HashSet<string>(existingNames, StringComparer.OrdinalIgnoreCase);
-        var toAdd = DefaultContentTags.All
-            .Where(t => !existingSet.Contains(t.Name))
-            .Select(t => new ContentTag { Name = t.Name, ColorHex = t.ColorHex })
+        var existingTags = await _db.Tags.ToListAsync(cancellationToken);
+        var existingByName = existingTags.ToDictionary(t => t.Name, StringComparer.OrdinalIgnoreCase);
+        var catalogNames = new HashSet<string>(
+            DefaultContentTags.All.Select(t => t.Name),
+            StringComparer.OrdinalIgnoreCase);
+        var utcNow = DateTime.UtcNow;
+
+        var toAdd = new List<ContentTag>();
+        foreach (var definition in DefaultContentTags.All)
+        {
+            if (existingByName.TryGetValue(definition.Name, out var existing))
+            {
+                existing.ColorHex = definition.ColorHex;
+                existing.SortOrder = definition.SortOrder;
+                continue;
+            }
+
+            toAdd.Add(definition.ToEntity(utcNow));
+        }
+
+        foreach (var tag in existingTags)
+        {
+            if (tag.SortOrder < 1000 && !catalogNames.Contains(tag.Name))
+                tag.SortOrder = 1000 + tag.Id;
+        }
+
+        if (toAdd.Count > 0)
+            _db.Tags.AddRange(toAdd);
+
+        await _db.SaveChangesAsync(cancellationToken);
+    }
+
+    private async Task RemoveLegacyDefaultTagsAsync(CancellationToken cancellationToken)
+    {
+        var newNames = new HashSet<string>(
+            DefaultContentTags.All.Select(t => t.Name),
+            StringComparer.OrdinalIgnoreCase);
+
+        var legacyNames = LegacyDefaultContentTags.Names.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var legacyTags = await _db.Tags.ToListAsync(cancellationToken);
+        var toRemove = legacyTags
+            .Where(t => legacyNames.Contains(t.Name) && !newNames.Contains(t.Name))
             .ToList();
 
-        if (toAdd.Count == 0) return;
+        if (toRemove.Count == 0)
+            return;
 
-        _db.Tags.AddRange(toAdd);
+        _db.Tags.RemoveRange(toRemove);
         await _db.SaveChangesAsync(cancellationToken);
     }
 
@@ -354,14 +441,37 @@ public class ContentRepository : IContentRepository
     }
 
     public async Task<IReadOnlyList<ContentTag>> GetTagsAsync(CancellationToken cancellationToken = default) =>
-        await _db.Tags.OrderBy(t => t.Name).ToListAsync(cancellationToken);
+        await _db.Tags.AsNoTracking().ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyDictionary<int, int>> GetTagUsageCountsAsync(
+        CancellationToken cancellationToken = default)
+    {
+        return await _db.ContentItems
+            .AsNoTracking()
+            .SelectMany(c => c.Tags.Select(t => t.Id))
+            .GroupBy(id => id)
+            .Select(g => new { TagId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.TagId, x => x.Count, cancellationToken);
+    }
 
     public async Task<ContentTag> SaveTagAsync(ContentTag tag, CancellationToken cancellationToken = default)
     {
         if (tag.Id == 0)
+        {
+            if (tag.CreatedAt == default)
+                tag.CreatedAt = DateTime.UtcNow;
+
+            if (tag.SortOrder <= 0)
+            {
+                var maxSort = await _db.Tags.MaxAsync(t => (int?)t.SortOrder, cancellationToken) ?? 999;
+                tag.SortOrder = Math.Max(maxSort + 1, 1000);
+            }
+
             _db.Tags.Add(tag);
+        }
         else
             _db.Tags.Update(tag);
+
         await _db.SaveChangesAsync(cancellationToken);
         return tag;
     }

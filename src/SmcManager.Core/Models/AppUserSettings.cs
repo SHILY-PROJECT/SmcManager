@@ -25,11 +25,17 @@ public class AppUserSettings
     /// <summary>Последнее состояние expand/collapse области медиа на экране просмотра контента.</summary>
     public bool IsContentMediaExpanded { get; set; }
 
+    /// <summary>Сортировка тегов в фильтрах и списках.</summary>
+    public TagSortMode TagSortMode { get; set; } = TagSortMode.Default;
+
     public static IReadOnlyList<int> AllowedRecentCounts { get; } = [10, 20, 30];
 
     public void Normalize()
     {
         if (!AllowedRecentCounts.Contains(RecentDownloadsCount))
             RecentDownloadsCount = 10;
+
+        if (!Enum.IsDefined(TagSortMode))
+            TagSortMode = TagSortMode.Default;
     }
 }

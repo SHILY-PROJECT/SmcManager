@@ -16,7 +16,7 @@
         <!-- Имя под иконкой на Android и в списке приложений (см. AppBranding.FullTitle) -->
         <ApplicationTitle>SmcManager - от меня щас что требуется?</ApplicationTitle>
         <ApplicationId>com.shily.smcmanager</ApplicationId>
-        <ApplicationDisplayVersion>0.1.49</ApplicationDisplayVersion>
+        <ApplicationDisplayVersion>0.1.53</ApplicationDisplayVersion>
 <!--        <ApplicationVersion>104</ApplicationVersion>-->
         <WindowsPackageType>None</WindowsPackageType>
 
@@ -26,7 +26,9 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <MauiIcon Include="Resources\AppIcon\appiconfg.png" />
+        <MauiIcon Include="Resources\AppIcon\appicon.png"
+                  ForegroundFile="Resources\AppIcon\appiconfg.png"
+                  Color="#0D0D12" />
         <MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#0D0D12" BaseSize="128,128" />
         <MauiImage Include="Resources\Images\*" />
         <MauiImage Update="Resources\Images\tab_*.svg" BaseSize="24,24" Resize="True" />

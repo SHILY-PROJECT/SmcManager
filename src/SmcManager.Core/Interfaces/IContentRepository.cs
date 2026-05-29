@@ -31,6 +31,8 @@ public interface IContentRepository
 
     Task<IReadOnlyList<ContentTag>> GetTagsAsync(CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyDictionary<int, int>> GetTagUsageCountsAsync(CancellationToken cancellationToken = default);
+
     Task<ContentTag> SaveTagAsync(ContentTag tag, CancellationToken cancellationToken = default);
 
     Task DeleteTagAsync(int tagId, CancellationToken cancellationToken = default);

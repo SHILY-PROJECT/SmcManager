@@ -19,6 +19,7 @@ namespace SmcManager.Maui.ViewModels;
 public partial class DownloadViewModel : ObservableObject,
     IRecipient<ShareUrlReceivedMessage>,
     IRecipient<TagsChangedMessage>,
+    IRecipient<TagSortChangedMessage>,
     IRecipient<ContentDeletedMessage>
 {
     private readonly IDownloadOrchestrator _orchestrator;
@@ -28,6 +29,7 @@ public partial class DownloadViewModel : ObservableObject,
     private readonly ISettingsService _settings;
     private readonly IAppStoragePaths _storagePaths;
     private readonly TagCreationService _tagCreation;
+    private readonly TagListService _tagList;
     private readonly BottomToastService _toast;
     private readonly RemoteImageCache _remoteImageCache;
     private readonly ILogger<DownloadViewModel> _logger;
@@ -52,6 +54,7 @@ public partial class DownloadViewModel : ObservableObject,
         ISettingsService settings,
         IAppStoragePaths storagePaths,
         TagCreationService tagCreation,
+        TagListService tagList,
         BottomToastService toast,
         RemoteImageCache remoteImageCache,
         ILogger<DownloadViewModel> logger)
@@ -63,11 +66,13 @@ public partial class DownloadViewModel : ObservableObject,
         _settings = settings;
         _storagePaths = storagePaths;
         _tagCreation = tagCreation;
+        _tagList = tagList;
         _toast = toast;
         _remoteImageCache = remoteImageCache;
         _logger = logger;
         WeakReferenceMessenger.Default.Register<ShareUrlReceivedMessage>(this);
         WeakReferenceMessenger.Default.Register<TagsChangedMessage>(this);
+        WeakReferenceMessenger.Default.Register<TagSortChangedMessage>(this);
         WeakReferenceMessenger.Default.Register<ContentDeletedMessage>(this);
     }
 
@@ -102,6 +107,8 @@ public partial class DownloadViewModel : ObservableObject,
     public string RecentDownloadsHeader => $"Последние скачивания";
 
     public string NewTagPanelToggleText => IsNewTagPanelVisible ? "Скрыть" : "+ Новый тег";
+
+    public IReadOnlyList<string> EmojiSuggestions { get; } = TagEmojiLibrary.Suggested;
 
     public ObservableCollection<ContentItemDisplayModel> RecentDownloads { get; } = [];
 
@@ -317,6 +324,20 @@ public partial class DownloadViewModel : ObservableObject,
     private void ToggleNewTagPanel() => IsNewTagPanelVisible = !IsNewTagPanelVisible;
 
     [RelayCommand]
+    private void AppendEmoji(string emoji)
+    {
+        if (string.IsNullOrWhiteSpace(emoji))
+            return;
+
+        var trimmed = NewTagName.Trim();
+        if (trimmed.StartsWith(emoji, StringComparison.Ordinal))
+            return;
+
+        var combined = string.IsNullOrWhiteSpace(trimmed) ? $"{emoji} " : $"{emoji} {trimmed}";
+        NewTagName = combined.Length <= 32 ? combined : NewTagName;
+    }
+
+    [RelayCommand]
     private void SelectTagColor(string color) => SelectedTagColor = color;
 
     [RelayCommand]
@@ -370,6 +391,12 @@ public partial class DownloadViewModel : ObservableObject,
     public void Receive(ShareUrlReceivedMessage message) => SetUrl(CleanUrlForDisplay(message.Url));
 
     public void Receive(TagsChangedMessage message) => _ = LoadTagsAsync();
+
+    public void Receive(TagSortChangedMessage message)
+    {
+        _ = LoadTagsAsync();
+        _ = RefreshRecentAsync();
+    }
 
     public void Receive(ContentDeletedMessage message) => _ = RefreshRecentAsync();
 
@@ -892,7 +919,7 @@ public partial class DownloadViewModel : ObservableObject,
 
     private async Task LoadTagsAsync()
     {
-        var tags = await _repository.GetTagsAsync();
+        var tags = await _tagList.GetSortedTagsAsync();
         var selectedIds = _selectedTagIds.ToHashSet();
         Tags.Clear();
         TagChips.Clear();
@@ -925,7 +952,13 @@ public partial class DownloadViewModel : ObservableObject,
         var items = await _repository.GetRecentContentAsync(appSettings.RecentDownloadsCount);
         RecentDownloads.Clear();
         foreach (var item in items)
-            RecentDownloads.Add(ContentItemDisplayModel.FromEntity(item, _storagePaths.DownloadsPath));
+        {
+            var orderedTags = await _tagList.SortTagsAsync(item.Tags);
+            RecentDownloads.Add(ContentItemDisplayModel.FromEntity(
+                item,
+                _storagePaths.DownloadsPath,
+                orderedTags));
+        }
 
         OnPropertyChanged(nameof(HasNoRecentDownloads));
         OnPropertyChanged(nameof(RecentDownloadsHeader));

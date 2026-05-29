@@ -15,16 +15,23 @@ namespace SmcManager.Maui.ViewModels;
 /// </summary>
 public partial class GroupsViewModel : ObservableObject,
     IRecipient<TagsChangedMessage>,
+    IRecipient<TagSortChangedMessage>,
     IRecipient<ContentDeletedMessage>
 {
     private readonly IContentRepository _repository;
     private readonly IAppStoragePaths _storagePaths;
+    private readonly TagListService _tagList;
 
-    public GroupsViewModel(IContentRepository repository, IAppStoragePaths storagePaths)
+    public GroupsViewModel(
+        IContentRepository repository,
+        IAppStoragePaths storagePaths,
+        TagListService tagList)
     {
         _repository = repository;
         _storagePaths = storagePaths;
+        _tagList = tagList;
         WeakReferenceMessenger.Default.Register<TagsChangedMessage>(this);
+        WeakReferenceMessenger.Default.Register<TagSortChangedMessage>(this);
         WeakReferenceMessenger.Default.Register<ContentDeletedMessage>(this);
     }
 
@@ -52,6 +59,13 @@ public partial class GroupsViewModel : ObservableObject,
 
     public void Receive(TagsChangedMessage message) => _ = LoadTagsAsync();
 
+    public void Receive(TagSortChangedMessage message)
+    {
+        _ = LoadTagsAsync();
+        if (SelectedTag is not null)
+            _ = LoadFilteredAsync();
+    }
+
     public void Receive(ContentDeletedMessage message) => _ = LoadFilteredAsync();
 
     [RelayCommand]
@@ -66,7 +80,7 @@ public partial class GroupsViewModel : ObservableObject,
 
     private async Task LoadTagsAsync()
     {
-        var tags = await _repository.GetTagsAsync();
+        var tags = await _tagList.GetSortedTagsAsync();
         TagChips.Clear();
 
         foreach (var tag in tags)
@@ -93,6 +107,12 @@ public partial class GroupsViewModel : ObservableObject,
 
         var items = await _repository.GetContentByTagAsync(SelectedTag.Id);
         foreach (var item in items)
-            FilteredItems.Add(ContentItemDisplayModel.FromEntity(item, _storagePaths.DownloadsPath));
+        {
+            var orderedTags = await _tagList.SortTagsAsync(item.Tags);
+            FilteredItems.Add(ContentItemDisplayModel.FromEntity(
+                item,
+                _storagePaths.DownloadsPath,
+                orderedTags));
+        }
     }
 }
