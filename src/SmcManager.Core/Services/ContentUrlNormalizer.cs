@@ -5,10 +5,32 @@ namespace SmcManager.Core.Services;
 /// </summary>
 public static class ContentUrlNormalizer
 {
+    /// <summary>
+    /// Обрезает текст до первой http(s)-ссылки (Instagram Share может добавлять теги в начало).
+    /// </summary>
+    public static string ExtractHttpUrl(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return text;
+
+        var trimmed = text.Trim();
+        var start = FindHttpUrlStart(trimmed);
+        if (start < 0)
+            return trimmed;
+
+        var candidate = trimmed[start..];
+        var end = candidate.IndexOfAny([' ', '\t', '\r', '\n']);
+        if (end > 0)
+            candidate = candidate[..end];
+
+        return candidate.TrimEnd('.', ',', ';', ')', ']', '"', '\'');
+    }
+
     public static string Normalize(string url)
     {
-        if (!Uri.TryCreate(url.Trim(), UriKind.Absolute, out var uri))
-            return url.Trim();
+        var extracted = ExtractHttpUrl(url);
+        if (!Uri.TryCreate(extracted.Trim(), UriKind.Absolute, out var uri))
+            return extracted.Trim();
 
         var host = uri.Host.ToLowerInvariant();
 
@@ -36,6 +58,20 @@ public static class ContentUrlNormalizer
             return uri.GetLeftPart(UriPartial.Path);
 
         return uri.GetLeftPart(UriPartial.Path);
+    }
+
+    private static int FindHttpUrlStart(string text)
+    {
+        var https = text.IndexOf("https://", StringComparison.OrdinalIgnoreCase);
+        var http = text.IndexOf("http://", StringComparison.OrdinalIgnoreCase);
+
+        if (https < 0)
+            return http;
+
+        if (http < 0)
+            return https;
+
+        return Math.Min(https, http);
     }
 
     private static string? GetQueryParam(Uri uri, string name)

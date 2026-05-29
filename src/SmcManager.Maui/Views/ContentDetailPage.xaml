@@ -43,22 +43,30 @@
                                 <views:MediaSlideDataTemplateSelector.ImageTemplate>
                                     <DataTemplate x:DataType="vm:MediaSlideViewModel">
                                         <Grid VerticalOptions="Fill">
-                                            <Image Source="{Binding ImageSource}"
-                                                   Aspect="AspectFit"
-                                                   HorizontalOptions="Fill"
-                                                   VerticalOptions="Start" />
+                                            <controls:LocalImageView ImagePath="{Binding DisplayImagePath}"
+                                                                     ImageAspect="AspectFit"
+                                                                     HorizontalOptions="Fill"
+                                                                     VerticalOptions="Start" />
                                         </Grid>
                                     </DataTemplate>
                                 </views:MediaSlideDataTemplateSelector.ImageTemplate>
                                 <views:MediaSlideDataTemplateSelector.VideoTemplate>
                                     <DataTemplate x:DataType="vm:MediaSlideViewModel">
-                                        <toolkit:MediaElement Source="{Binding VideoSource}"
-                                                              ShouldAutoPlay="False"
-                                                              ShouldShowPlaybackControls="True"
-                                                              ShouldLoopPlayback="False"
-                                                              Aspect="AspectFit"
-                                                              HorizontalOptions="Fill"
-                                                              VerticalOptions="Center" />
+                                        <Grid VerticalOptions="Fill">
+                                            <controls:LocalImageView ImagePath="{Binding PosterPath}"
+                                                                     ImageAspect="AspectFit"
+                                                                     HorizontalOptions="Fill"
+                                                                     VerticalOptions="Center"
+                                                                     IsVisible="{Binding IsActive, Converter={StaticResource InvertedBoolConverter}}" />
+                                            <toolkit:MediaElement Source="{Binding ActiveVideoSource}"
+                                                                  IsVisible="{Binding IsActive}"
+                                                                  ShouldAutoPlay="False"
+                                                                  ShouldShowPlaybackControls="True"
+                                                                  ShouldLoopPlayback="False"
+                                                                  Aspect="AspectFit"
+                                                                  HorizontalOptions="Fill"
+                                                                  VerticalOptions="Center" />
+                                        </Grid>
                                     </DataTemplate>
                                 </views:MediaSlideDataTemplateSelector.VideoTemplate>
                             </views:MediaSlideDataTemplateSelector>

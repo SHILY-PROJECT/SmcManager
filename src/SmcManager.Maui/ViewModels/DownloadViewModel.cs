@@ -953,7 +953,7 @@ public partial class DownloadViewModel : ObservableObject,
 
     private static string CleanUrlForDisplay(string url)
     {
-        var trimmed = url.Trim();
+        var trimmed = ContentUrlNormalizer.ExtractHttpUrl(url);
         return UrlPlatformDetector.TryDetect(trimmed, out _, out _)
             ? ContentUrlNormalizer.Normalize(trimmed)
             : trimmed;

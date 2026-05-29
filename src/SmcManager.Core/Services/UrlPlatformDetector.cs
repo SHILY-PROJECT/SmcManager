@@ -12,6 +12,9 @@ public static class UrlPlatformDetector
         platform = SocialPlatform.Instagram;
         kind = ContentKind.Post;
 
+        if (string.IsNullOrWhiteSpace(url)) return false;
+
+        url = ContentUrlNormalizer.ExtractHttpUrl(url);
         if (!Uri.TryCreate(url.Trim(), UriKind.Absolute, out var uri))
             return false;
 

@@ -39,6 +39,7 @@ public partial class ContentDetailPage : ContentPage, IRecipient<ThemeChangedMes
         ApplyThemedIcons();
         await vm.LoadForDisplayAsync();
         ApplyCarouselPosition(vm.CurrentSlideIndex);
+        await vm.ActivateCurrentSlideAsync();
     }
 
     protected override void OnDisappearing()

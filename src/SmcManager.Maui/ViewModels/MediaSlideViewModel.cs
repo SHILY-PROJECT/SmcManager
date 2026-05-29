@@ -1,4 +1,5 @@
 using CommunityToolkit.Maui.Views;
+using CommunityToolkit.Mvvm.ComponentModel;
 using SmcManager.Core.Enums;
 
 namespace SmcManager.Maui.ViewModels;
@@ -6,7 +7,7 @@ namespace SmcManager.Maui.ViewModels;
 /// <summary>
 /// Один слайд медиа на экране деталей (фото или видео).
 /// </summary>
-public class MediaSlideViewModel
+public partial class MediaSlideViewModel : ObservableObject
 {
     public string LocalPath { get; init; } = string.Empty;
 
@@ -18,20 +19,34 @@ public class MediaSlideViewModel
 
     public bool IsVideo => MediaType == MediaType.Video;
 
-    public ImageSource? ImageSource
+    [ObservableProperty]
+    private bool _isActive;
+
+    public string? DisplayImagePath
     {
         get
         {
-            var path = IsVideo && !string.IsNullOrWhiteSpace(ThumbnailPath) && File.Exists(ThumbnailPath)
-                ? ThumbnailPath!
-                : LocalPath;
+            if (IsVideo)
+            {
+                if (!string.IsNullOrWhiteSpace(ThumbnailPath) && File.Exists(ThumbnailPath))
+                    return ThumbnailPath;
 
-            return File.Exists(path) ? ImageSource.FromFile(path) : null;
+                return null;
+            }
+
+            return File.Exists(LocalPath) ? LocalPath : null;
         }
     }
 
-    public MediaSource? VideoSource =>
-        IsVideo && File.Exists(LocalPath)
+    public string? PosterPath =>
+        !string.IsNullOrWhiteSpace(ThumbnailPath) && File.Exists(ThumbnailPath)
+            ? ThumbnailPath
+            : null;
+
+    public MediaSource? ActiveVideoSource =>
+        IsActive && IsVideo && File.Exists(LocalPath)
             ? MediaSource.FromFile(Path.GetFullPath(LocalPath))
             : null;
+
+    partial void OnIsActiveChanged(bool value) => OnPropertyChanged(nameof(ActiveVideoSource));
 }

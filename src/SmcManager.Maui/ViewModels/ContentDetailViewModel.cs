@@ -29,6 +29,8 @@ public partial class ContentDetailViewModel : ObservableObject, IQueryAttributab
 
     private ContentItem? _content;
     private DateTime _enteredAtUtc;
+    private readonly SemaphoreSlim _loadGate = new(1, 1);
+    private int _loadVersion;
 
     public ContentDetailViewModel(
         IContentRepository repository,
@@ -55,7 +57,6 @@ public partial class ContentDetailViewModel : ObservableObject, IQueryAttributab
             ContentId = value?.ToString() ?? string.Empty;
 
         _enteredAtUtc = DateTime.UtcNow;
-        _ = LoadForDisplayAsync();
     }
 
     public ObservableCollection<MediaSlideViewModel> MediaSlides { get; } = [];
@@ -198,6 +199,7 @@ public partial class ContentDetailViewModel : ObservableObject, IQueryAttributab
     partial void OnCurrentSlideIndexChanged(int value)
     {
         UpdateSlideIndicator();
+        UpdateActiveSlide(value);
         OnPropertyChanged(nameof(ShowCarouselPrevious));
         OnPropertyChanged(nameof(ShowCarouselNext));
         GoToPreviousSlideCommand.NotifyCanExecuteChanged();
@@ -441,12 +443,43 @@ public partial class ContentDetailViewModel : ObservableObject, IQueryAttributab
         if (!int.TryParse(ContentId, out var id) || id <= 0)
             return;
 
-        if (_loadedContentId == id && IsContentLoaded)
-            return;
+        await _loadGate.WaitAsync().ConfigureAwait(false);
+        var version = ++_loadVersion;
 
-        var item = await _repository.GetContentByIdAsync(id);
-        if (item is null) return;
+        try
+        {
+            if (_loadedContentId == id && IsContentLoaded)
+                return;
 
+            var item = await _repository.GetContentByIdAsync(id).ConfigureAwait(false);
+            if (item is null || version != _loadVersion)
+                return;
+
+            var appSettings = await _settings.GetAppSettingsAsync().ConfigureAwait(false);
+            if (version != _loadVersion)
+                return;
+
+            await MainThread.InvokeOnMainThreadAsync(() =>
+            {
+                if (version != _loadVersion)
+                    return;
+
+                ApplyLoadedContent(item, id, appSettings);
+            });
+
+            if (version != _loadVersion)
+                return;
+
+            await LoadTagEditorAsync().ConfigureAwait(false);
+        }
+        finally
+        {
+            _loadGate.Release();
+        }
+    }
+
+    private void ApplyLoadedContent(ContentItem item, int id, AppUserSettings appSettings)
+    {
         _content = item;
         _loadedContentId = id;
         CanOpenSource = !string.IsNullOrWhiteSpace(item.SourceUrl);
@@ -460,8 +493,6 @@ public partial class ContentDetailViewModel : ObservableObject, IQueryAttributab
         IsEditingComment = false;
         IsContentLoaded = true;
         OnPropertyChanged(nameof(ShowCaptionPlaceholder));
-
-        await LoadTagEditorAsync();
 
         var downloadsRoot = _storagePaths.DownloadsPath;
         var thumbnailPath = ContentThumbnailHelper.ResolveThumbnailPath(item, downloadsRoot);
@@ -485,17 +516,40 @@ public partial class ContentDetailViewModel : ObservableObject, IQueryAttributab
 
         HasMultipleSlides = MediaSlides.Count > 1;
         HasMediaSlides = MediaSlides.Count > 0;
-
-        var appSettings = await _settings.GetAppSettingsAsync();
         IsMediaExpanded = HasMediaSlides && appSettings.IsContentMediaExpanded;
 
         CurrentSlideIndex = 0;
         UpdateSlideIndicator();
+        foreach (var slide in MediaSlides)
+            slide.IsActive = false;
         OnPropertyChanged(nameof(ShowCarouselPrevious));
         OnPropertyChanged(nameof(ShowCarouselNext));
         OnPropertyChanged(nameof(CanToggleDescription));
         GoToPreviousSlideCommand.NotifyCanExecuteChanged();
         GoToNextSlideCommand.NotifyCanExecuteChanged();
+    }
+
+    public void UpdateActiveSlide(int index)
+    {
+        if (MediaSlides.Count == 0)
+            return;
+
+        index = Math.Clamp(index, 0, MediaSlides.Count - 1);
+        for (var i = 0; i < MediaSlides.Count; i++)
+            MediaSlides[i].IsActive = i == index;
+    }
+
+    public async Task ActivateCurrentSlideAsync()
+    {
+        if (MediaSlides.Count == 0)
+            return;
+
+#if ANDROID
+        await Task.Delay(150).ConfigureAwait(false);
+#endif
+
+        var index = CurrentSlideIndex;
+        await MainThread.InvokeOnMainThreadAsync(() => UpdateActiveSlide(index));
     }
 
     private void UpdateSlideIndicator() =>
@@ -506,17 +560,20 @@ public partial class ContentDetailViewModel : ObservableObject, IQueryAttributab
         if (_content is null)
             return;
 
-        var allTags = await _repository.GetTagsAsync();
+        var allTags = await _repository.GetTagsAsync().ConfigureAwait(false);
         var assignedIds = _content.Tags.Select(t => t.Id).ToHashSet();
 
-        TagChips.Clear();
-        foreach (var tag in allTags)
+        await MainThread.InvokeOnMainThreadAsync(() =>
         {
-            TagChips.Add(new TagChipViewModel(tag)
+            TagChips.Clear();
+            foreach (var tag in allTags)
             {
-                IsSelected = assignedIds.Contains(tag.Id)
-            });
-        }
+                TagChips.Add(new TagChipViewModel(tag)
+                {
+                    IsSelected = assignedIds.Contains(tag.Id)
+                });
+            }
+        });
     }
 
     private void SyncTagChipSelection()

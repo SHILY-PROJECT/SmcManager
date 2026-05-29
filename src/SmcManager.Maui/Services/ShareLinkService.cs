@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.Messaging;
+using SmcManager.Core.Services;
 using SmcManager.Core.Interfaces;
 using SmcManager.Maui.Messages;
 
@@ -17,7 +18,7 @@ public class ShareLinkService
     {
         if (string.IsNullOrWhiteSpace(url)) return;
 
-        var trimmed = url.Trim();
+        var trimmed = ContentUrlNormalizer.ExtractHttpUrl(url).Trim();
         if (!trimmed.Contains("instagram", StringComparison.OrdinalIgnoreCase)
             && !trimmed.Contains("youtu", StringComparison.OrdinalIgnoreCase)
             && !trimmed.Contains("vk.com", StringComparison.OrdinalIgnoreCase))
