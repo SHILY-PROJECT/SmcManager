@@ -149,7 +149,7 @@ public partial class ContentDetailPage : ContentPage, IRecipient<ThemeChangedMes
             if (vm.CurrentSlideIndex != position)
                 vm.CurrentSlideIndex = position;
 
-            vm.RefreshCurrentSlideMedia();
+            _ = vm.PrepareCurrentSlideMediaAsync();
 
             if (MediaCarousel.Handler is not null)
                 CarouselSlideNavigator.NavigateTo(MediaCarousel, position, vm.MediaSlides.Count);

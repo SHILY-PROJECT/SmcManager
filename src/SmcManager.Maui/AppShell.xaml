@@ -3,6 +3,7 @@
        xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
        xmlns:views="clr-namespace:SmcManager.Maui.Views"
        xmlns:models="clr-namespace:SmcManager.Maui.Models"
+       xmlns:services="clr-namespace:SmcManager.Maui.Services"
        x:Class="SmcManager.Maui.AppShell"
        x:Name="ShellRoot"
        FlyoutBehavior="Flyout"
@@ -20,12 +21,14 @@
               SafeAreaEdges="Container"
               Padding="0,16,0,16"
               BackgroundColor="{DynamicResource BackgroundSecondary}">
-            <VerticalStackLayout Grid.Row="0"
-                                 Padding="18,0,18,12"
-                                 Spacing="8">
-                <Border WidthRequest="56"
+            <Grid Grid.Row="0"
+                  Padding="18,0,18,12"
+                  ColumnDefinitions="Auto,*"
+                  ColumnSpacing="12">
+                <Border Grid.Column="0"
+                        WidthRequest="56"
                         HeightRequest="56"
-                        HorizontalOptions="Start"
+                        VerticalOptions="Center"
                         BackgroundColor="{DynamicResource BackgroundPrimary}"
                         Stroke="{DynamicResource Divider}"
                         StrokeThickness="1">
@@ -39,11 +42,19 @@
                            HorizontalOptions="Center"
                            VerticalOptions="Center" />
                 </Border>
-                <Label Text="SmcManager"
-                       FontSize="18"
-                       FontAttributes="Bold"
-                       TextColor="{DynamicResource TextPrimary}" />
-            </VerticalStackLayout>
+                <VerticalStackLayout Grid.Column="1"
+                                     Spacing="2"
+                                     VerticalOptions="Center">
+                    <Label Text="{x:Static services:AppBranding.AppName}"
+                           FontSize="18"
+                           FontAttributes="Bold"
+                           TextColor="{DynamicResource TextPrimary}" />
+                    <Label Text="{x:Static services:AppBranding.FlyoutTagline}"
+                           FontSize="12"
+                           TextColor="{DynamicResource TextSecondary}"
+                           LineBreakMode="WordWrap" />
+                </VerticalStackLayout>
+            </Grid>
             <CollectionView Grid.Row="1"
                             x:Name="FlyoutMenuView"
                             ItemsSource="{Binding FlyoutMenuItems, Source={x:Reference ShellRoot}}"

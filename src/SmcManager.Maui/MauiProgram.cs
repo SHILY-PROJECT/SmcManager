@@ -53,6 +53,10 @@ public static class MauiProgram
                             textView.AutoLinkMask = 0;
                         }
                     });
+
+                Microsoft.Maui.Handlers.WebViewHandler.Mapper.AppendToMapping(
+                    "InAppNavigation",
+                    (handler, _) => Platforms.Android.InAppWebViewConfigurator.Configure(handler));
 #endif
             });
 

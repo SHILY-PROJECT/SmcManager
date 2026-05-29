@@ -18,16 +18,12 @@ public partial class SocialLoginPage : ContentPage
         _viewModel.CloseRequested = CloseModalAsync;
     }
 
-    private static INavigation? ModalNavigation =>
-        Shell.Current?.Navigation ?? Application.Current?.MainPage?.Navigation;
-
     private async Task CloseModalAsync()
     {
-        var navigation = ModalNavigation;
-        if (navigation is null) return;
+        if (Navigation.ModalStack.Count == 0)
+            return;
 
-        if (navigation.ModalStack.Count > 0)
-            await navigation.PopModalAsync(animated: true);
+        await MainThread.InvokeOnMainThreadAsync(() => Navigation.PopModalAsync(animated: true));
     }
 
     protected override void OnAppearing()

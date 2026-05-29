@@ -14,6 +14,24 @@ public class ShareLinkService
 
     public ShareLinkService(ISettingsService settings) => _settings = settings;
 
+    /// <summary>Переход на вкладку «Скачать» (с ожиданием Shell при холодном старте).</summary>
+    public async Task EnsureDownloadTabAsync()
+    {
+        for (var attempt = 0; attempt < 40 && Shell.Current is null; attempt++)
+            await Task.Delay(50).ConfigureAwait(false);
+
+        await MainThread.InvokeOnMainThreadAsync(async () =>
+        {
+            if (Shell.Current is null)
+                return;
+
+            if (Shell.Current.FlyoutIsPresented)
+                Shell.Current.FlyoutIsPresented = false;
+
+            await Shell.Current.GoToAsync("//download");
+        });
+    }
+
     public static bool TryNormalizeIncomingUrl(string? raw, out string normalized)
     {
         normalized = string.Empty;
@@ -35,15 +53,9 @@ public class ShareLinkService
 
         await _settings.SetPendingShareUrlAsync(normalized).ConfigureAwait(false);
 
-        await MainThread.InvokeOnMainThreadAsync(async () =>
-        {
-            if (Shell.Current is not null
-                && Shell.Current.CurrentState?.Location?.OriginalString?.Contains("download", StringComparison.OrdinalIgnoreCase) != true)
-            {
-                await Shell.Current.GoToAsync("//download");
-            }
+        await EnsureDownloadTabAsync().ConfigureAwait(false);
 
-            WeakReferenceMessenger.Default.Send(new ShareUrlReceivedMessage(normalized));
-        });
+        await MainThread.InvokeOnMainThreadAsync(() =>
+            WeakReferenceMessenger.Default.Send(new ShareUrlReceivedMessage(normalized)));
     }
 }

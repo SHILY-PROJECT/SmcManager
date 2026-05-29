@@ -168,7 +168,10 @@ public partial class SocialLoginViewModel : ObservableObject
         ctx.Completion.TrySetResult(result);
         SocialLoginNavigationContext.Current = null;
 
-        if (CloseRequested is not null)
-            await CloseRequested.Invoke();
+        await MainThread.InvokeOnMainThreadAsync(async () =>
+        {
+            if (CloseRequested is not null)
+                await CloseRequested.Invoke();
+        });
     }
 }

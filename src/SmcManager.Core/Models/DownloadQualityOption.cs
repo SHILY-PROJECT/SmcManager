@@ -30,9 +30,7 @@ public class DownloadQualityOption
         Label = label ?? (platform is SocialPlatform.Instagram or SocialPlatform.Vkontakte
             ? "Максимальное (фото и видео)"
             : "Максимальное качество"),
-        FormatSelector = platform is SocialPlatform.Instagram or SocialPlatform.Vkontakte
-            ? "best[ext=jpg]/best[ext=jpeg]/best[ext=webp]/best[ext=png]/best"
-            : "bestvideo+bestaudio/best",
+        FormatSelector = "bestvideo+bestaudio/best",
         Height = int.MaxValue,
         IsDefault = true
     };

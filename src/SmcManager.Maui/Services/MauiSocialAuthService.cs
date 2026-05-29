@@ -1,3 +1,4 @@
+using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using SmcManager.Core.Enums;
 using SmcManager.Core.Interfaces;
@@ -40,18 +41,20 @@ public class MauiSocialAuthService : ISocialAuthService
         }
         finally
         {
-            if (navigation.ModalStack.Count > 0)
+            await MainThread.InvokeOnMainThreadAsync(async () =>
             {
-                try
+                if (navigation.ModalStack.LastOrDefault() is Views.SocialLoginPage)
                 {
-                    await MainThread.InvokeOnMainThreadAsync(() =>
-                        navigation.PopModalAsync(animated: true));
+                    try
+                    {
+                        await navigation.PopModalAsync(animated: true);
+                    }
+                    catch
+                    {
+                        // already closed
+                    }
                 }
-                catch
-                {
-                    // already closed
-                }
-            }
+            }).ConfigureAwait(false);
 
             SocialLoginNavigationContext.Current = null;
         }

@@ -1039,16 +1039,20 @@ public partial class DownloadViewModel : ObservableObject,
         bool useAccount,
         int? accountId,
         IReadOnlyList<int> tagIds,
-        string? qualityFormatId)
+        DownloadQualityOption? quality)
     {
+        UrlPlatformDetector.TryDetect(normalizedUrl, out _, out var kind);
+
         return new DownloadRequest
         {
             Url = normalizedUrl,
+            ContentKind = kind,
             TagIds = tagIds,
             SocialAccountId = accountId,
             UseSocialAccount = accountId.HasValue || useAccount,
             UsePostedDateForFolder = appSettings.UsePostedDateForFolder,
-            QualityFormatId = qualityFormatId ?? QualityIds.Best
+            QualityFormatId = quality?.Id ?? QualityIds.Best,
+            QualityFormatSelector = quality?.FormatSelector
         };
     }
 
@@ -1060,14 +1064,13 @@ public partial class DownloadViewModel : ObservableObject,
         AppUserSettings appSettings)
     {
         var tagIds = _selectedTagIds.ToList();
-        var qualityId = SelectedQuality?.Id;
         var request = BuildDownloadRequest(
             normalizedUrl,
             appSettings,
             useAccount,
             accountId,
             tagIds,
-            qualityId);
+            SelectedQuality);
 
         try
         {

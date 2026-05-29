@@ -64,6 +64,9 @@ public partial class ContentDetailViewModel : ObservableObject, IQueryAttributab
             ContentId = value?.ToString() ?? string.Empty;
 
         _enteredAtUtc = DateTime.UtcNow;
+
+        if (int.TryParse(ContentId, out _))
+            _ = LoadAsync();
     }
 
     public ObservableCollection<MediaSlideViewModel> MediaSlides { get; } = [];
@@ -258,7 +261,7 @@ public partial class ContentDetailViewModel : ObservableObject, IQueryAttributab
             return;
 
         CurrentSlideIndex = position;
-        RefreshCurrentSlideMedia();
+        _ = PrepareCurrentSlideMediaAsync();
     }
 
     partial void OnIsMediaExpandedChanged(bool value)
@@ -557,16 +560,24 @@ public partial class ContentDetailViewModel : ObservableObject, IQueryAttributab
 
     public void RefreshCurrentSlideMedia()
     {
-        var slide = GetCurrentSlide();
-        if (slide is { IsVideo: true } && File.Exists(slide.LocalPath))
+        try
         {
-            ShowCurrentVideoPlayer = true;
-            CurrentVideoSource = MediaSource.FromFile(Path.GetFullPath(slide.LocalPath));
-            return;
-        }
+            var slide = GetCurrentSlide();
+            if (slide is { IsVideo: true } && File.Exists(slide.LocalPath))
+            {
+                ShowCurrentVideoPlayer = true;
+                CurrentVideoSource = MediaSource.FromFile(Path.GetFullPath(slide.LocalPath));
+                return;
+            }
 
-        ShowCurrentVideoPlayer = false;
-        CurrentVideoSource = null;
+            ShowCurrentVideoPlayer = false;
+            CurrentVideoSource = null;
+        }
+        catch
+        {
+            ShowCurrentVideoPlayer = false;
+            CurrentVideoSource = null;
+        }
     }
 
     public void StopCurrentVideo()
@@ -584,7 +595,7 @@ public partial class ContentDetailViewModel : ObservableObject, IQueryAttributab
             return;
 
 #if ANDROID
-        await Task.Delay(200).ConfigureAwait(false);
+        await Task.Delay(450).ConfigureAwait(false);
 #endif
 
         await MainThread.InvokeOnMainThreadAsync(RefreshCurrentSlideMedia);

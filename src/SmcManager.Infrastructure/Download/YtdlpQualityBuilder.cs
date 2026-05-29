@@ -75,18 +75,20 @@ internal static class YtdlpQualityBuilder
 
     public static string ResolveFormatSelector(
         string? qualityFormatId,
+        string? qualityFormatSelector,
         SocialPlatform platform,
         ContentKind? contentKind = null)
     {
         if (!string.IsNullOrWhiteSpace(qualityFormatId) && qualityFormatId != QualityIds.Best)
             return qualityFormatId;
 
+        if (!string.IsNullOrWhiteSpace(qualityFormatSelector))
+            return qualityFormatSelector;
+
         if (platform == SocialPlatform.Instagram && contentKind is ContentKind.Reel)
             return VideoFormatSelector;
 
-        return platform is SocialPlatform.Instagram or SocialPlatform.Vkontakte
-            ? PhotoFriendlyFormatSelector
-            : BestFormatSelector;
+        return BestFormatSelector;
     }
 
     public static bool IsVideoContent(SocialPlatform platform, ContentKind? contentKind) =>

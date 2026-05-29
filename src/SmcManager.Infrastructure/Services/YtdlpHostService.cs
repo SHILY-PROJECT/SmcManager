@@ -442,7 +442,10 @@ public sealed class YtdlpHostService
             cookieFile = await YtdlpCookieHelper.WriteCookieFileAsync(account, cancellationToken);
             var isVideoContent = YtdlpQualityBuilder.IsVideoContent(platform, request.ContentKind);
             var format = YtdlpQualityBuilder.ResolveFormatSelector(
-                request.QualityFormatId, platform, request.ContentKind);
+                request.QualityFormatId,
+                request.QualityFormatSelector,
+                platform,
+                request.ContentKind);
             var mergeFormat = isVideoContent
                 ? DownloadMergeFormat.Mp4
                 : platform is SocialPlatform.Instagram or SocialPlatform.Vkontakte

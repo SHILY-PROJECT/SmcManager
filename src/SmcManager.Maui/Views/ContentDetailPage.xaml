@@ -7,6 +7,7 @@
              xmlns:controls="clr-namespace:SmcManager.Maui.Views.Controls"
              xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
              x:Class="SmcManager.Maui.Views.ContentDetailPage"
+             x:Name="DetailPage"
              x:DataType="vm:ContentDetailViewModel"
              Shell.NavBarIsVisible="False"
              Shell.BackgroundColor="{DynamicResource BackgroundPrimary}"
@@ -145,7 +146,7 @@
                                 <controls:TagChipView Text="{Binding Name}"
                                                       ColorHex="{Binding ColorHex}"
                                                       IsSelected="{Binding IsSelected}"
-                                                      SelectCommand="{Binding Source={RelativeSource AncestorType={x:Type views:ContentDetailPage}}, Path=BindingContext.ToggleContentTagCommand}"
+                                                      SelectCommand="{Binding Source={x:Reference DetailPage}, Path=BindingContext.ToggleContentTagCommand}"
                                                       SelectParameter="{Binding .}"
                                                       VerticalOptions="Center" />
                             </DataTemplate>

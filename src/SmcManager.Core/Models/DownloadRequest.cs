@@ -24,4 +24,7 @@ public class DownloadRequest
 
     /// <summary>Качество: «best» или format_id / itag. null — максимальное.</summary>
     public string? QualityFormatId { get; set; }
+
+    /// <summary>Строка формата yt-dlp (-f) из выбранного качества в UI.</summary>
+    public string? QualityFormatSelector { get; set; }
 }
