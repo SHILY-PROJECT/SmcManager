@@ -33,6 +33,8 @@ public partial class LibraryViewModel : ObservableObject,
 
     public ObservableCollection<ContentItemDisplayModel> Items { get; } = [];
 
+    public bool HasNoItems => Items.Count == 0;
+
     [ObservableProperty]
     private bool _isRefreshing;
 
@@ -59,6 +61,7 @@ public partial class LibraryViewModel : ObservableObject,
         finally
         {
             IsRefreshing = false;
+            OnPropertyChanged(nameof(HasNoItems));
         }
     }
 
@@ -69,6 +72,7 @@ public partial class LibraryViewModel : ObservableObject,
             return;
 
         Items.Remove(item);
+        OnPropertyChanged(nameof(HasNoItems));
         WeakReferenceMessenger.Default.Send(new ContentDeletedMessage());
     }
 

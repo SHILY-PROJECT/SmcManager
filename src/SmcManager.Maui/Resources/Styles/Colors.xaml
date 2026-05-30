@@ -7,10 +7,10 @@
     <Color x:Key="BackgroundSecondary">#F2F2F7</Color>
     <Color x:Key="BackgroundElevated">#FFFFFF</Color>
 
-    <Color x:Key="AccentPrimary">#4A8FE7</Color>
-    <Color x:Key="DownloadAccent">#4A8FE7</Color>
-    <Color x:Key="AccentSecondary">#6BA3F0</Color>
-    <Color x:Key="AccentGradientEnd">#3A7BD5</Color>
+    <Color x:Key="AccentPrimary">#1A1A1E</Color>
+    <Color x:Key="DownloadAccent">#1A1A1E</Color>
+    <Color x:Key="AccentSecondary">#333333</Color>
+    <Color x:Key="AccentGradientEnd">#000000</Color>
 
     <Color x:Key="TextPrimary">#1A1A1E</Color>
     <Color x:Key="TextSecondary">#5C5C66</Color>
@@ -21,14 +21,14 @@
     <Color x:Key="TagChipBackground">#14000000</Color>
 
   <!-- Чипы тегов в стиле соцсетей -->
-    <Color x:Key="TagChipFill">#E8F3FE</Color>
-    <Color x:Key="TagChipStroke">#CCE4FF</Color>
-    <Color x:Key="TagChipText">#1877F2</Color>
-    <Color x:Key="TagChipSelectedFill">#1877F2</Color>
+    <Color x:Key="TagChipFill">#F0F0F2</Color>
+    <Color x:Key="TagChipStroke">#D1D1D6</Color>
+    <Color x:Key="TagChipText">#1A1A1E</Color>
+    <Color x:Key="TagChipSelectedFill">#1A1A1E</Color>
     <Color x:Key="TagChipSelectedText">#FFFFFF</Color>
 
-    <Color x:Key="Primary">#4A8FE7</Color>
-    <Color x:Key="Secondary">#3A7BD5</Color>
+    <Color x:Key="Primary">#1A1A1E</Color>
+    <Color x:Key="Secondary">#333333</Color>
     <Color x:Key="White">#FFFFFF</Color>
     <Color x:Key="Black">#000000</Color>
 

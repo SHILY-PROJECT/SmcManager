@@ -139,6 +139,7 @@ public partial class AppHeaderView : ContentView,
     private void ApplyIcons(ThemePalette palette)
     {
         _lastPalette = palette;
+        ThemedIconHelper.SetSource(MenuIconImage, palette.MenuIcon);
         ThemedIconHelper.SetSource(
             SettingsButton,
             _isBackMode ? palette.HeaderBackIcon : palette.TabSettingsIcon);

@@ -20,10 +20,9 @@
                 <Border.GestureRecognizers>
                     <TapGestureRecognizer Tapped="OnMenuClicked" />
                 </Border.GestureRecognizers>
-                <Image x:Name="AppLogoImage"
-                       Source="app_logo.png"
-                       WidthRequest="36"
-                       HeightRequest="36"
+                <Image x:Name="MenuIconImage"
+                       WidthRequest="24"
+                       HeightRequest="24"
                        Aspect="AspectFit"
                        HorizontalOptions="Center"
                        VerticalOptions="Center"
