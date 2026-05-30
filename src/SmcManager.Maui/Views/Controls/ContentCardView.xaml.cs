@@ -19,6 +19,24 @@ public partial class ContentCardView : ContentView
     public static readonly BindableProperty OpenCommandProperty = BindableProperty.Create(
         nameof(OpenCommand), typeof(ICommand), typeof(ContentCardView));
 
+    public static readonly BindableProperty IsNavigationEnabledProperty = BindableProperty.Create(
+        nameof(IsNavigationEnabled), typeof(bool), typeof(ContentCardView), true);
+
+    public static readonly BindableProperty IsSwipeEnabledProperty = BindableProperty.Create(
+        nameof(IsSwipeEnabled), typeof(bool), typeof(ContentCardView), true);
+
+    public bool IsNavigationEnabled
+    {
+        get => (bool)GetValue(IsNavigationEnabledProperty);
+        set => SetValue(IsNavigationEnabledProperty, value);
+    }
+
+    public bool IsSwipeEnabled
+    {
+        get => (bool)GetValue(IsSwipeEnabledProperty);
+        set => SetValue(IsSwipeEnabledProperty, value);
+    }
+
     public ContentItemDisplayModel? Item
     {
         get => (ContentItemDisplayModel?)GetValue(ItemProperty);
@@ -83,20 +101,17 @@ public partial class ContentCardView : ContentView
 
     private bool _isNavigating;
 
-    private async void OnCardTapped(object? sender, TappedEventArgs e)
+    private async void OnCardClicked(object? sender, EventArgs e)
     {
-        if (Item is null || _isNavigating)
+        if (!IsNavigationEnabled || Item is null || _isNavigating)
             return;
-
-        if (OpenCommand?.CanExecute(Item) == true)
-        {
-            OpenCommand.Execute(Item);
-            return;
-        }
 
         _isNavigating = true;
         try
         {
+            if (Shell.Current?.CurrentPage is Page page)
+                page.Unfocus();
+
             await ContentNavigationHelper.OpenDetailAsync(Item.Id);
         }
         finally

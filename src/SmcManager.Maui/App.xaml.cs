@@ -32,25 +32,6 @@ public partial class App : Application
         var window = new Window(shell);
         AppBranding.ApplyWindowTitles();
 
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                var settings = _services.GetRequiredService<ISettingsService>();
-                var pending = await settings.GetPendingShareUrlAsync().ConfigureAwait(false);
-                if (string.IsNullOrWhiteSpace(pending))
-                    return;
-
-                var share = _services.GetRequiredService<ShareLinkService>();
-                await share.EnsureDownloadTabAsync().ConfigureAwait(false);
-                await share.DeliverPendingShareAsync().ConfigureAwait(false);
-            }
-            catch
-            {
-                // cold-start navigation is best-effort
-            }
-        });
-
 #if WINDOWS
         Platforms.Windows.WindowsWindowBranding.Apply(
             window,

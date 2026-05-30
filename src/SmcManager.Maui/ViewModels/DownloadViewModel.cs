@@ -72,6 +72,9 @@ public partial class DownloadViewModel : ObservableObject,
         _toast = toast;
         _remoteImageCache = remoteImageCache;
         _logger = logger;
+
+        WeakReferenceMessenger.Default.Register<TagsChangedMessage>(this);
+        WeakReferenceMessenger.Default.Register<ContentDeletedMessage>(this);
     }
 
     public void ActivateMessaging()
@@ -80,9 +83,7 @@ public partial class DownloadViewModel : ObservableObject,
             return;
 
         _messagingActive = true;
-        WeakReferenceMessenger.Default.Register<TagsChangedMessage>(this);
         WeakReferenceMessenger.Default.Register<TagSortChangedMessage>(this);
-        WeakReferenceMessenger.Default.Register<ContentDeletedMessage>(this);
     }
 
     public void DeactivateMessaging()
@@ -91,9 +92,7 @@ public partial class DownloadViewModel : ObservableObject,
             return;
 
         _messagingActive = false;
-        WeakReferenceMessenger.Default.Unregister<TagsChangedMessage>(this);
         WeakReferenceMessenger.Default.Unregister<TagSortChangedMessage>(this);
-        WeakReferenceMessenger.Default.Unregister<ContentDeletedMessage>(this);
     }
 
     public async Task ApplyIncomingShareUrlAsync(string url)
@@ -101,6 +100,7 @@ public partial class DownloadViewModel : ObservableObject,
         if (!TryBeginShareUrlApply(url))
             return;
 
+        ContentNavigationHelper.BeginShareSession();
         await MainThread.InvokeOnMainThreadAsync(() => ApplySharedUrl(url));
         await _settings.SetPendingShareUrlAsync(null);
     }
@@ -437,7 +437,11 @@ public partial class DownloadViewModel : ObservableObject,
         });
     }
 
-    public void Receive(TagsChangedMessage message) => _ = LoadTagsAsync();
+    public void Receive(TagsChangedMessage message)
+    {
+        _ = LoadTagsAsync();
+        _ = RefreshRecentAsync();
+    }
 
     public void Receive(TagSortChangedMessage message)
     {
@@ -445,7 +449,8 @@ public partial class DownloadViewModel : ObservableObject,
         _ = RefreshRecentAsync();
     }
 
-    public void Receive(ContentDeletedMessage message) => _ = RefreshRecentAsync();
+    public void Receive(ContentDeletedMessage message) =>
+        _ = MainThread.InvokeOnMainThreadAsync(RefreshRecentAsync);
 
     [RelayCommand]
     private async Task DeleteRecentItemAsync(ContentItemDisplayModel item)
@@ -453,10 +458,13 @@ public partial class DownloadViewModel : ObservableObject,
         if (!await ContentDeletionHelper.ConfirmAndDeleteAsync(_repository, item))
             return;
 
-        RecentDownloads.Remove(item);
+        await MainThread.InvokeOnMainThreadAsync(() =>
+        {
+            RecentDownloads.Remove(item);
+            OnPropertyChanged(nameof(HasNoRecentDownloads));
+            OnPropertyChanged(nameof(RecentDownloadsHeader));
+        });
         WeakReferenceMessenger.Default.Send(new ContentDeletedMessage());
-        OnPropertyChanged(nameof(HasNoRecentDownloads));
-        OnPropertyChanged(nameof(RecentDownloadsHeader));
     }
 
     [RelayCommand]
@@ -828,6 +836,9 @@ public partial class DownloadViewModel : ObservableObject,
         ClearLinkMetadataUi();
         ResetAccountPickerUi();
         OnPropertyChanged(nameof(HasUrl));
+
+        if (Shell.Current?.CurrentPage is Page page)
+            page.Unfocus();
     }
 
     private void ClearUrlFieldOnly()
@@ -1030,21 +1041,35 @@ public partial class DownloadViewModel : ObservableObject,
     private async Task RefreshRecentAsync()
     {
         var appSettings = await _settings.GetAppSettingsAsync();
-        RecentCountLabel = appSettings.RecentDownloadsCount;
-
         var items = await _repository.GetRecentContentAsync(appSettings.RecentDownloadsCount);
-        RecentDownloads.Clear();
+
+        var displayItems = new List<ContentItemDisplayModel>();
         foreach (var item in items)
         {
+            if (!ContentThumbnailHelper.HasAvailableMedia(item))
+            {
+                await _repository.DeleteContentAsync(item.Id);
+                continue;
+            }
+
             var orderedTags = await _tagList.SortTagsAsync(item.Tags);
-            RecentDownloads.Add(ContentItemDisplayModel.FromEntity(
+            displayItems.Add(ContentItemDisplayModel.FromEntity(
                 item,
                 _storagePaths.DownloadsPath,
                 orderedTags));
         }
 
-        OnPropertyChanged(nameof(HasNoRecentDownloads));
-        OnPropertyChanged(nameof(RecentDownloadsHeader));
+        var recentCountLabel = appSettings.RecentDownloadsCount;
+        await MainThread.InvokeOnMainThreadAsync(() =>
+        {
+            RecentCountLabel = recentCountLabel;
+            RecentDownloads.Clear();
+            foreach (var display in displayItems)
+                RecentDownloads.Add(display);
+
+            OnPropertyChanged(nameof(HasNoRecentDownloads));
+            OnPropertyChanged(nameof(RecentDownloadsHeader));
+        });
     }
 
     private async Task ApplyPendingShareUrlAsync()
@@ -1057,6 +1082,7 @@ public partial class DownloadViewModel : ObservableObject,
         if (!TryBeginShareUrlApply(pending))
             return;
 
+        ContentNavigationHelper.BeginShareSession();
         SetUrl(CleanUrlForDisplay(pending));
     }
 

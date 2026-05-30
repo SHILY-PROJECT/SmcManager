@@ -92,17 +92,13 @@ public class MainActivity : MauiAppCompatActivity
         }
 
         _lastHandledShareUrl = normalized;
+        ContentNavigationHelper.BeginShareSession();
+        Preferences.Default.Set(MauiSettingsService.PendingShareUrlPreferenceKey, normalized);
+        ClearShareIntent();
 
         var shareService = ResolveShareService();
-        if (shareService is null)
-        {
-            Preferences.Default.Set(MauiSettingsService.PendingShareUrlPreferenceKey, normalized);
-            ClearShareIntent();
-            return;
-        }
-
-        _ = shareService.HandleIncomingUrlAsync(text);
-        ClearShareIntent();
+        if (shareService is not null)
+            _ = shareService.ProcessPendingAsync();
     }
 
     private void ClearShareIntent()

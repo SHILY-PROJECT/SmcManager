@@ -38,11 +38,11 @@ public partial class AppShell : Shell, IRecipient<ThemeChangedMessage>
 
     private void OnShellNavigated(object? sender, ShellNavigatedEventArgs e)
     {
+        ShellReadiness.MarkReady();
         AppNavigationState.Update(this);
         PageSafeAreaHelper.EnsureApplied(CurrentPage);
 
-        if (IsDownloadRoute(e.Current?.Location?.OriginalString))
-            _ = _shareLinkService.DeliverPendingShareAsync();
+        _ = _shareLinkService.ProcessPendingAsync();
     }
 
     private static bool IsDownloadRoute(string? location) =>

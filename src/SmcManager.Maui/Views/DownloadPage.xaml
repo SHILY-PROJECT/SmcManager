@@ -15,8 +15,14 @@
         <controls:AppHeaderView Grid.Row="0"
                                 Title="Главная"
                                 ShowTitle="True" />
-        <ScrollView Grid.Row="1">
-            <VerticalStackLayout Padding="20,0,20,16" Spacing="16">
+        <!-- SelectionChanged вместо тапа: на Android после Share intent жесты в ScrollView+BindableLayout часто не доходят -->
+        <CollectionView x:Name="RecentDownloadsList"
+                        Grid.Row="1"
+                        ItemsSource="{Binding RecentDownloads}"
+                        SelectionMode="Single"
+                        SelectionChanged="OnRecentDownloadSelected">
+            <CollectionView.Header>
+                <VerticalStackLayout Padding="20,0,20,0" Spacing="16">
                 <Label Text="Ссылка на контент"
                        Style="{StaticResource SectionTitleStyle}" />
 
@@ -260,10 +266,10 @@
                        Style="{StaticResource SectionSubtitleStyle}"
                        IsVisible="{Binding HasActiveDownloads}" />
 
-                <CollectionView ItemsSource="{Binding ActiveDownloads}"
-                                IsVisible="{Binding HasActiveDownloads}"
-                                SelectionMode="None">
-                    <CollectionView.ItemTemplate>
+                <VerticalStackLayout BindableLayout.ItemsSource="{Binding ActiveDownloads}"
+                                     Spacing="8"
+                                     IsVisible="{Binding HasActiveDownloads}">
+                    <BindableLayout.ItemTemplate>
                         <DataTemplate x:DataType="vm:PendingDownloadViewModel">
                             <Border Style="{StaticResource CardBorderStyle}"
                                     Margin="0,0,0,8">
@@ -312,8 +318,8 @@
                                 </VerticalStackLayout>
                             </Border>
                         </DataTemplate>
-                    </CollectionView.ItemTemplate>
-                </CollectionView>
+                    </BindableLayout.ItemTemplate>
+                </VerticalStackLayout>
 
                 <Label Text="{Binding StatusMessage}"
                        Style="{StaticResource EmojiCapableLabelStyle}"
@@ -322,26 +328,24 @@
 
                 <Label Text="{Binding RecentDownloadsHeader}"
                        Style="{StaticResource SectionTitleStyle}"
-                       Margin="0,12,0,0" />
-
-                <!-- BindableLayout вместо CollectionView: вложенный CollectionView в ScrollView на Android даёт краш при тапе -->
+                       Margin="0,12,0,8" />
+                </VerticalStackLayout>
+            </CollectionView.Header>
+            <CollectionView.EmptyView>
                 <Label Text="Пока ничего не скачано"
                        TextColor="{DynamicResource TextMuted}"
                        HorizontalOptions="Center"
-                       Margin="12"
-                       IsVisible="{Binding HasNoRecentDownloads}" />
-                <VerticalStackLayout BindableLayout.ItemsSource="{Binding RecentDownloads}"
-                                     Spacing="5"
-                                     IsVisible="{Binding HasNoRecentDownloads, Converter={StaticResource InvertedBoolConverter}}">
-                    <BindableLayout.ItemTemplate>
-                        <DataTemplate x:DataType="vm:ContentItemDisplayModel">
-                            <controls:ContentCardView Item="{Binding .}"
-                                                      OpenCommand="{Binding Source={RelativeSource AncestorType={x:Type vm:DownloadViewModel}}, Path=OpenRecentContentCommand}"
-                                                      DeleteCommand="{Binding Source={RelativeSource AncestorType={x:Type vm:DownloadViewModel}}, Path=DeleteRecentItemCommand}" />
-                        </DataTemplate>
-                    </BindableLayout.ItemTemplate>
-                </VerticalStackLayout>
-            </VerticalStackLayout>
-        </ScrollView>
+                       Margin="12,0,12,16" />
+            </CollectionView.EmptyView>
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="vm:ContentItemDisplayModel">
+                    <controls:ContentCardView Item="{Binding .}"
+                                              Margin="20,0,20,5"
+                                              IsNavigationEnabled="False"
+                                              IsSwipeEnabled="False"
+                                              DeleteCommand="{Binding Source={RelativeSource AncestorType={x:Type vm:DownloadViewModel}}, Path=DeleteRecentItemCommand}" />
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
     </Grid>
 </ContentPage>

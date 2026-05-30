@@ -76,6 +76,40 @@ public static class ShellBackNavigation
         return true;
     }
 
+    public static Task GoBackAsync()
+    {
+        var shell = Shell.Current;
+        if (shell is null)
+            return Task.CompletedTask;
+
+        if (shell.Navigation.ModalStack.Count > 0)
+        {
+            return MainThread.InvokeOnMainThreadAsync(async () =>
+            {
+                try
+                {
+                    await shell.Navigation.PopModalAsync(animated: true);
+                }
+                catch
+                {
+                    // already closed
+                }
+            });
+        }
+
+        return MainThread.InvokeOnMainThreadAsync(async () =>
+        {
+            try
+            {
+                await shell.GoToAsync("..");
+            }
+            catch
+            {
+                // nothing to pop
+            }
+        });
+    }
+
     private static bool IsFlyoutRootPage(Page page) =>
         FlyoutRootPageTypes.Contains(page.GetType());
 }

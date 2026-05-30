@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.Messaging;
+using Microsoft.Maui.Hosting;
 using SmcManager.Core.Enums;
 using SmcManager.Maui.Messages;
 using SmcManager.Maui.Services;
@@ -28,6 +29,8 @@ public partial class DownloadPage : ContentPage, IRecipient<ThemeChangedMessage>
             if (vm.AppearingCommand.CanExecute(null))
                 vm.AppearingCommand.Execute(null);
         }
+
+        _ = IPlatformApplication.Current?.Services?.GetService<ShareLinkService>()?.ProcessPendingAsync();
     }
 
     protected override void OnDisappearing()
@@ -40,6 +43,20 @@ public partial class DownloadPage : ContentPage, IRecipient<ThemeChangedMessage>
     }
 
     public void Receive(ThemeChangedMessage message) => ApplyThemedIcons(message.Palette);
+
+    private async void OnRecentDownloadSelected(object? sender, SelectionChangedEventArgs e)
+    {
+        if (sender is not CollectionView list)
+            return;
+
+        if (e.CurrentSelection.FirstOrDefault() is not ContentItemDisplayModel item)
+            return;
+
+        list.SelectedItem = null;
+
+        Unfocus();
+        await ContentNavigationHelper.OpenDetailAsync(item.Id);
+    }
 
     private void ApplyThemedIcons(ThemePalette? palette = null)
     {

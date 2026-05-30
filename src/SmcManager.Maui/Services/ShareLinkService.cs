@@ -2,6 +2,7 @@ using System.Text.RegularExpressions;
 using SmcManager.Core.Services;
 using SmcManager.Core.Interfaces;
 using SmcManager.Maui.ViewModels;
+using SmcManager.Maui.Views;
 
 namespace SmcManager.Maui.Services;
 
@@ -14,6 +15,7 @@ public class ShareLinkService
         @"href\s*=\s*[""']([^""']+)[""']",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+    private static readonly SemaphoreSlim ProcessGate = new(1, 1);
     private static readonly SemaphoreSlim DeliverGate = new(1, 1);
     private static string? _inFlightShareUrl;
     private static string? _lastIncomingShareUrl;
@@ -23,12 +25,10 @@ public class ShareLinkService
 
     public ShareLinkService(ISettingsService settings) => _settings = settings;
 
-    /// <summary>Переход на вкладку «Скачать» (с ожиданием Shell при холодном старте).</summary>
-    public Task EnsureDownloadTabAsync() => NavigateToDownloadTabAsync();
-
-    public async Task HandleIncomingUrlAsync(string? url)
+    /// <summary>Сохраняет Share URL и доставляет его на «Главную», когда Shell готов.</summary>
+    public async Task OnShareUrlReceivedAsync(string normalized)
     {
-        if (!TryExtractNormalizedUrl(url, out var normalized))
+        if (string.IsNullOrWhiteSpace(normalized))
             return;
 
         if (string.Equals(_lastIncomingShareUrl, normalized, StringComparison.OrdinalIgnoreCase)
@@ -38,14 +38,35 @@ public class ShareLinkService
         _lastIncomingShareUrl = normalized;
         _lastIncomingShareAt = Environment.TickCount64;
 
+        ContentNavigationHelper.BeginShareSession();
         await _settings.SetPendingShareUrlAsync(normalized).ConfigureAwait(false);
-        await NavigateToDownloadTabAsync().ConfigureAwait(false);
-        await DeliverPendingShareAsync().ConfigureAwait(false);
+        await ProcessPendingAsync().ConfigureAwait(false);
+    }
+
+    /// <summary>Доставляет отложенную Share-ссылку (если есть).</summary>
+    public async Task ProcessPendingAsync()
+    {
+        await ProcessGate.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            var pending = await _settings.GetPendingShareUrlAsync().ConfigureAwait(false);
+            if (string.IsNullOrWhiteSpace(pending))
+                return;
+
+            await ShellReadiness.WaitAsync().ConfigureAwait(false);
+            await NavigateToDownloadTabAsync().ConfigureAwait(false);
+            await DeliverPendingShareAsync().ConfigureAwait(false);
+        }
+        finally
+        {
+            ProcessGate.Release();
+        }
     }
 
     /// <summary>Отправляет отложенную ссылку на экран «Скачать» (если есть).</summary>
     public async Task DeliverPendingShareAsync()
     {
+        await ShellReadiness.WaitAsync().ConfigureAwait(false);
         await DeliverGate.WaitAsync().ConfigureAwait(false);
         try
         {
@@ -131,16 +152,11 @@ public class ShareLinkService
 
     private async Task NavigateToDownloadTabAsync()
     {
-        for (var attempt = 0; attempt < 40 && Shell.Current is null; attempt++)
-            await Task.Delay(50).ConfigureAwait(false);
+        await ShellReadiness.WaitAsync().ConfigureAwait(false);
 
         await MainThread.InvokeOnMainThreadAsync(async () =>
         {
             if (Shell.Current is not Shell shell)
-                return;
-
-            var location = shell.CurrentState?.Location?.OriginalString ?? string.Empty;
-            if (location.Contains("ContentDetailPage", StringComparison.OrdinalIgnoreCase))
                 return;
 
             shell.FlyoutIsPresented = false;
@@ -148,14 +164,18 @@ public class ShareLinkService
             while (shell.Navigation.ModalStack.Count > 0)
                 await shell.Navigation.PopModalAsync(animated: false);
 
-            while (shell.Navigation.NavigationStack.Count > 1)
-                await shell.Navigation.PopAsync(animated: false);
+            if (shell.CurrentPage is DownloadPage)
+                return;
+
+            var location = shell.CurrentState?.Location?.OriginalString ?? string.Empty;
+            if (location.Contains("download", StringComparison.OrdinalIgnoreCase)
+                && !location.Contains(nameof(ContentDetailPage), StringComparison.OrdinalIgnoreCase))
+                return;
 
             if (!location.Contains("download", StringComparison.OrdinalIgnoreCase))
-            {
                 ShellNavigationHistory.RecordFlyoutNavigation("download");
-                await shell.GoToAsync("//download");
-            }
+
+            await shell.GoToAsync("//download", animate: false);
         });
     }
 }

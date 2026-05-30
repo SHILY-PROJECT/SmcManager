@@ -38,6 +38,7 @@ public partial class ContentDetailViewModel : ObservableObject, IRecipient<TagsC
     private readonly SemaphoreSlim _mediaPrepareGate = new(1, 1);
     private int _loadVersion;
     private CancellationTokenSource? _mediaPrepareCts;
+    private bool _suppressTagsChangedReload;
 #if ANDROID
     private bool _videoPlaybackRequested;
 #endif
@@ -68,7 +69,16 @@ public partial class ContentDetailViewModel : ObservableObject, IRecipient<TagsC
         WeakReferenceMessenger.Default.Register<TagSortChangedMessage>(this);
     }
 
-    public void Receive(TagsChangedMessage message) => _ = LoadTagEditorAsync();
+    public void Receive(TagsChangedMessage message)
+    {
+        if (_suppressTagsChangedReload)
+        {
+            _suppressTagsChangedReload = false;
+            return;
+        }
+
+        _ = LoadTagEditorAsync();
+    }
 
     public void Receive(TagSortChangedMessage message) => _ = LoadTagEditorAsync();
 
@@ -355,7 +365,11 @@ public partial class ContentDetailViewModel : ObservableObject, IRecipient<TagsC
     private async Task AppearingAsync() => await LoadAsync();
 
     /// <summary>Загрузка данных для страницы (вызывается из code-behind после появления).</summary>
-    public Task LoadForDisplayAsync() => LoadAsync();
+    public Task LoadForDisplayAsync()
+    {
+        _loadedContentId = 0;
+        return LoadAsync();
+    }
 
     [RelayCommand]
     private void ToggleDescription()
@@ -481,6 +495,7 @@ public partial class ContentDetailViewModel : ObservableObject, IRecipient<TagsC
             _content = updated;
 
         await LoadTagEditorAsync();
+        _suppressTagsChangedReload = true;
         WeakReferenceMessenger.Default.Send(new TagsChangedMessage());
         NewTagStatusMessage = $"Тег «{tag!.Name}» добавлен и назначен.";
     }
@@ -504,6 +519,8 @@ public partial class ContentDetailViewModel : ObservableObject, IRecipient<TagsC
             _content = updated;
 
         SyncTagChipSelection();
+        _suppressTagsChangedReload = true;
+        WeakReferenceMessenger.Default.Send(new TagsChangedMessage());
     }
 
     [RelayCommand]
@@ -552,8 +569,9 @@ public partial class ContentDetailViewModel : ObservableObject, IRecipient<TagsC
         if (!await ContentDeletionHelper.ConfirmAndDeleteAsync(_repository, display))
             return;
 
+        await MainThread.InvokeOnMainThreadAsync(ClearLoadedContentState);
         WeakReferenceMessenger.Default.Send(new ContentDeletedMessage());
-        await Shell.Current.GoToAsync("..");
+        await ShellBackNavigation.GoBackAsync();
     }
 
     [RelayCommand]
@@ -614,8 +632,22 @@ public partial class ContentDetailViewModel : ObservableObject, IRecipient<TagsC
                 return;
 
             var item = await _repository.GetContentByIdAsync(id).ConfigureAwait(false);
-            if (item is null || version != _loadVersion)
+            if (version != _loadVersion)
                 return;
+
+            if (item is null)
+            {
+                await HandleMissingContentAsync("Контент не найден или был удалён.");
+                return;
+            }
+
+            if (!ContentThumbnailHelper.HasAvailableMedia(item))
+            {
+                await _repository.DeleteContentAsync(id);
+                WeakReferenceMessenger.Default.Send(new ContentDeletedMessage());
+                await HandleMissingContentAsync("Медиафайлы не найдены. Запись удалена из списка.");
+                return;
+            }
 
             var appSettings = await _settings.GetAppSettingsAsync().ConfigureAwait(false);
             if (version != _loadVersion)
@@ -694,6 +726,32 @@ public partial class ContentDetailViewModel : ObservableObject, IRecipient<TagsC
         GoToPreviousSlideCommand.NotifyCanExecuteChanged();
         GoToNextSlideCommand.NotifyCanExecuteChanged();
         NotifyVideoPlayPromptChanged();
+    }
+
+    private async Task HandleMissingContentAsync(string message)
+    {
+        await MainThread.InvokeOnMainThreadAsync(ClearLoadedContentState);
+        await _toast.ShowWarningAsync(message);
+        await ShellBackNavigation.GoBackAsync();
+    }
+
+    private void ClearLoadedContentState()
+    {
+        StopCurrentVideo();
+        _content = null;
+        _loadedContentId = 0;
+        IsContentLoaded = false;
+        HasMediaSlides = false;
+        HasMultipleSlides = false;
+        CanOpenSource = false;
+        AuthorTitle = string.Empty;
+        Caption = null;
+        HasCaption = false;
+        UserComment = null;
+        IsEditingCaption = false;
+        IsEditingComment = false;
+        MediaSlides.Clear();
+        TagChips.Clear();
     }
 
     public void RefreshCurrentSlideMedia()

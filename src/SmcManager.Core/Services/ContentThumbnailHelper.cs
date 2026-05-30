@@ -40,4 +40,10 @@ public static class ContentThumbnailHelper
 
     public static bool HasVideoMedia(ContentItem item) =>
         item.MediaFiles.Any(m => m.MediaType == MediaType.Video);
+
+    public static bool HasAvailableMedia(ContentItem item) =>
+        item.MediaFiles.Any(m =>
+            !string.IsNullOrWhiteSpace(m.LocalPath)
+            && !IsThumbnailFile(m.LocalPath)
+            && File.Exists(m.LocalPath));
 }
