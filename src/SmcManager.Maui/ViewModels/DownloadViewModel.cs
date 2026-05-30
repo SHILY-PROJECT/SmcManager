@@ -45,6 +45,8 @@ public partial class DownloadViewModel : ObservableObject,
     private SocialAccount? _lastDefaultAccount;
     private AppUserSettings? _lastAppSettings;
     private SocialPlatform? _previewPlatform;
+    private string? _lastShareUrlApplied;
+    private long _lastShareAppliedTick;
 
     public DownloadViewModel(
         IDownloadOrchestrator orchestrator,
@@ -206,16 +208,15 @@ public partial class DownloadViewModel : ObservableObject,
     private async Task AppearingAsync()
     {
         _ = _linkMetadata.WarmupAsync();
-        await LoadTagsAsync();
-        await RefreshRecentAsync();
 
         var hadPendingShare = !string.IsNullOrWhiteSpace(await _settings.GetPendingShareUrlAsync());
         await ApplyPendingShareUrlAsync();
 
-        if (_holdDownloadFormClear && !hadPendingShare)
+        if (_holdDownloadFormClear && !hadPendingShare && string.IsNullOrWhiteSpace(Url))
             await ClearDownloadInputAsync();
-        else if (!string.IsNullOrWhiteSpace(Url))
-            ScheduleUrlRefresh();
+
+        _ = LoadTagsAsync();
+        _ = RefreshRecentAsync();
     }
 
     partial void OnUrlChanged(string value)
@@ -392,16 +393,44 @@ public partial class DownloadViewModel : ObservableObject,
 
     public void Receive(ShareUrlReceivedMessage message)
     {
+        if (!TryBeginShareUrlApply(message.Url))
+            return;
+
         if (MainThread.IsMainThread)
-            _ = ApplySharedUrlAsync(message.Url);
+            ApplySharedUrl(message.Url);
         else
-            MainThread.BeginInvokeOnMainThread(() => _ = ApplySharedUrlAsync(message.Url));
+            MainThread.BeginInvokeOnMainThread(() => ApplySharedUrl(message.Url));
     }
 
-    private async Task ApplySharedUrlAsync(string url)
+    private void ApplySharedUrl(string url) => SetUrl(CleanUrlForDisplay(url));
+
+    private bool TryBeginShareUrlApply(string url)
     {
-        SetUrl(CleanUrlForDisplay(url));
-        await _settings.SetPendingShareUrlAsync(null);
+        if (string.IsNullOrWhiteSpace(url))
+            return false;
+
+        var now = Environment.TickCount64;
+        if (string.Equals(_lastShareUrlApplied, url, StringComparison.OrdinalIgnoreCase)
+            && now - _lastShareAppliedTick < 2000)
+            return false;
+
+        _lastShareUrlApplied = url;
+        _lastShareAppliedTick = now;
+        return true;
+    }
+
+    private void BeginLinkMetadataLoading()
+    {
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            if (string.IsNullOrWhiteSpace(Url)
+                || !UrlPlatformDetector.TryDetect(Url, out _, out _))
+                return;
+
+            IsLoadingPreview = true;
+            IsLoadingQualities = true;
+            OnPropertyChanged(nameof(ShowFallbackDownloadButton));
+        });
     }
 
     public void Receive(TagsChangedMessage message) => _ = LoadTagsAsync();
@@ -426,7 +455,7 @@ public partial class DownloadViewModel : ObservableObject,
         OnPropertyChanged(nameof(RecentDownloadsHeader));
     }
 
-    private void ScheduleUrlRefresh()
+    private void ScheduleUrlRefresh(bool forceImmediateLoading = false)
     {
         _metadataRefreshCts?.Cancel();
         _metadataRefreshCts?.Dispose();
@@ -436,6 +465,10 @@ public partial class DownloadViewModel : ObservableObject,
         _urlRefreshCts?.Dispose();
         _urlRefreshCts = new CancellationTokenSource();
         var ct = _urlRefreshCts.Token;
+
+        if (forceImmediateLoading || !string.IsNullOrWhiteSpace(Url))
+            BeginLinkMetadataLoading();
+
         _ = RefreshAfterUrlChangeAsync(ct);
     }
 
@@ -539,21 +572,20 @@ public partial class DownloadViewModel : ObservableObject,
 
         try
         {
-            await Task.Delay(650, ct).ConfigureAwait(false);
-            if (ct.IsCancellationRequested) return;
-
-            await MainThread.InvokeOnMainThreadAsync(ClearLinkMetadataUi);
-
-            var url = await EnsureCleanUrlInFieldAsync(Url).ConfigureAwait(false);
-            _logger.LogDebug("RefreshAfterUrlChangeAsync: fetching metadata for {Url}", url);
-            await RefreshAccountPickerAsync(preserveUserSelection: false).ConfigureAwait(false);
+            await Task.Delay(200, ct).ConfigureAwait(false);
             if (ct.IsCancellationRequested) return;
 
             await MainThread.InvokeOnMainThreadAsync(() =>
             {
                 IsLoadingPreview = true;
                 IsLoadingQualities = true;
+                OnPropertyChanged(nameof(ShowFallbackDownloadButton));
             });
+
+            var url = await EnsureCleanUrlInFieldAsync(Url).ConfigureAwait(false);
+            _logger.LogDebug("RefreshAfterUrlChangeAsync: fetching metadata for {Url}", url);
+            await RefreshAccountPickerAsync(preserveUserSelection: false).ConfigureAwait(false);
+            if (ct.IsCancellationRequested) return;
 
             var (useAccount, accountId) = ResolveDownloadAccountSelection();
 
@@ -594,6 +626,14 @@ public partial class DownloadViewModel : ObservableObject,
 
     private void ApplyMetadata(LinkMetadataResult metadata)
     {
+        var activeUrl = ResolveActiveDownloadUrl();
+        SocialPlatform platform = default;
+        ContentKind kind = default;
+        var hasValidUrl = !string.IsNullOrWhiteSpace(activeUrl)
+                          && UrlPlatformDetector.TryDetect(activeUrl, out platform, out kind);
+
+        ShowLinkPreview = false;
+
         if (metadata.Preview is { } preview)
         {
             _previewPlatform = preview.Platform;
@@ -605,29 +645,45 @@ public partial class DownloadViewModel : ObservableObject,
             ShowLinkPreview = !string.IsNullOrWhiteSpace(PreviewTitle)
                               || !string.IsNullOrWhiteSpace(PreviewThumbnail);
 
-            if (ShowLinkPreview)
-            {
-                var activeUrl = ResolveActiveDownloadUrl();
-                if (!string.IsNullOrWhiteSpace(activeUrl))
-                    _pendingDownloadUrl = ContentUrlNormalizer.Normalize(activeUrl);
-
-                ClearUrlFieldOnly();
-                OnPropertyChanged(nameof(ShowFallbackDownloadButton));
-            }
-
             _logger.LogInformation(
-                "ApplyMetadata: preview shown. Title={Title}, Author={Author}, Thumb={Thumb}, ShowLinkPreview={Show}",
+                "ApplyMetadata: preview metadata. Title={Title}, Author={Author}, Thumb={Thumb}, ShowLinkPreview={Show}",
                 PreviewTitle,
                 PreviewAuthor,
                 PreviewThumbnail,
                 ShowLinkPreview);
         }
-        else
+
+        if (!ShowLinkPreview && hasValidUrl)
         {
-            ShowLinkPreview = false;
+            _previewPlatform = platform;
+            PreviewTitle = kind switch
+            {
+                ContentKind.Reel => "Reels",
+                ContentKind.Story => "Stories",
+                _ => SocialAccountAuth.GetPlatformTitle(platform)
+            };
+            PreviewAuthor = SocialAccountAuth.GetPlatformTitle(platform);
+            PreviewThumbnail = null;
+            PreviewImageFile = null;
+            ShowLinkPreview = true;
+
+            _logger.LogWarning(
+                "ApplyMetadata: fallback preview shell for {Platform}/{Kind}",
+                platform,
+                kind);
+        }
+        else if (!ShowLinkPreview)
+        {
             _logger.LogWarning(
                 "ApplyMetadata: no preview from metadata. Qualities={QualityCount}",
                 metadata.Qualities.Count);
+        }
+
+        if (ShowLinkPreview && hasValidUrl)
+        {
+            _pendingDownloadUrl = ContentUrlNormalizer.Normalize(activeUrl!);
+            ClearUrlFieldOnly();
+            OnPropertyChanged(nameof(ShowFallbackDownloadButton));
         }
 
         QualityOptions.Clear();
@@ -727,6 +783,7 @@ public partial class DownloadViewModel : ObservableObject,
     {
         IsLoadingPreview = false;
         IsLoadingQualities = false;
+        OnPropertyChanged(nameof(ShowFallbackDownloadButton));
 
         if (ShowLinkPreview && !string.IsNullOrWhiteSpace(PreviewThumbnail))
             _ = LoadPreviewImageAsync(PreviewThumbnail);
@@ -989,11 +1046,14 @@ public partial class DownloadViewModel : ObservableObject,
     private async Task ApplyPendingShareUrlAsync()
     {
         var pending = await _settings.GetPendingShareUrlAsync();
-        if (!string.IsNullOrWhiteSpace(pending))
-        {
-            SetUrl(CleanUrlForDisplay(pending));
-            await _settings.SetPendingShareUrlAsync(null);
-        }
+        if (string.IsNullOrWhiteSpace(pending))
+            return;
+
+        await _settings.SetPendingShareUrlAsync(null);
+        if (!TryBeginShareUrlApply(pending))
+            return;
+
+        SetUrl(CleanUrlForDisplay(pending));
     }
 
     private void SetUrl(string value)

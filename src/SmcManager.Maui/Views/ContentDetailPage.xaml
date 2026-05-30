@@ -61,8 +61,10 @@
                             </CarouselView.ItemTemplate>
                         </CarouselView>
 
-                        <toolkit:MediaElement Source="{Binding CurrentVideoSource}"
+                        <toolkit:MediaElement x:Name="VideoPlayer"
+                                              Source="{Binding CurrentVideoSource}"
                                               IsVisible="{Binding ShowCurrentVideoPlayer}"
+                                              IsEnabled="{Binding ShowCurrentVideoPlayer}"
                                               ShouldAutoPlay="False"
                                               ShouldShowPlaybackControls="True"
                                               ShouldLoopPlayback="False"
@@ -70,6 +72,23 @@
                                               HorizontalOptions="Fill"
                                               VerticalOptions="Fill"
                                               ZIndex="1" />
+
+                        <ImageButton Style="{StaticResource IconActionButtonStyle}"
+                                     WidthRequest="56"
+                                     HeightRequest="56"
+                                     Padding="14"
+                                     HorizontalOptions="Center"
+                                     VerticalOptions="Center"
+                                     IsVisible="{Binding ShowVideoPlayPrompt}"
+                                     Command="{Binding PlayCurrentVideoCommand}"
+                                     SemanticProperties.Description="Воспроизвести видео"
+                                     ZIndex="2">
+                            <ImageButton.Source>
+                                <FontImageSource Glyph="▶"
+                                                 Color="{DynamicResource TextPrimary}"
+                                                 Size="22" />
+                            </ImageButton.Source>
+                        </ImageButton>
 
                         <ImageButton x:Name="ShareMediaButton"
                                      Style="{StaticResource IconActionButtonStyle}"
@@ -146,7 +165,7 @@
                                 <controls:TagChipView Text="{Binding Name}"
                                                       ColorHex="{Binding ColorHex}"
                                                       IsSelected="{Binding IsSelected}"
-                                                      SelectCommand="{Binding Source={x:Reference DetailPage}, Path=BindingContext.ToggleContentTagCommand}"
+                                                      SelectCommand="{Binding Source={RelativeSource AncestorType={x:Type vm:ContentDetailViewModel}}, Path=ToggleContentTagCommand}"
                                                       SelectParameter="{Binding .}"
                                                       VerticalOptions="Center" />
                             </DataTemplate>

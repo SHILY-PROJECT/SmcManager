@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Messaging;
 using SmcManager.Core.Services;
 using SmcManager.Core.Interfaces;
 using SmcManager.Maui.Messages;
+using SmcManager.Maui.ViewModels;
 
 namespace SmcManager.Maui.Services;
 
@@ -14,6 +15,9 @@ public class ShareLinkService
     private static readonly Regex HrefRegex = new(
         @"href\s*=\s*[""']([^""']+)[""']",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+    private static readonly SemaphoreSlim DeliverGate = new(1, 1);
+    private static string? _inFlightShareUrl;
 
     private readonly ISettingsService _settings;
 
@@ -35,21 +39,44 @@ public class ShareLinkService
     /// <summary>Отправляет отложенную ссылку на экран «Скачать» (если есть).</summary>
     public async Task DeliverPendingShareAsync()
     {
-        var pending = await _settings.GetPendingShareUrlAsync().ConfigureAwait(false);
-        if (string.IsNullOrWhiteSpace(pending))
-            return;
-
-        for (var attempt = 0; attempt < 8; attempt++)
+        await DeliverGate.WaitAsync().ConfigureAwait(false);
+        try
         {
-            await MainThread.InvokeOnMainThreadAsync(() =>
-                WeakReferenceMessenger.Default.Send(new ShareUrlReceivedMessage(pending)));
-
-            await Task.Delay(attempt == 0 ? 80 : 120).ConfigureAwait(false);
-
-            var remaining = await _settings.GetPendingShareUrlAsync().ConfigureAwait(false);
-            if (string.IsNullOrWhiteSpace(remaining))
+            var pending = await _settings.GetPendingShareUrlAsync().ConfigureAwait(false);
+            if (string.IsNullOrWhiteSpace(pending))
                 return;
+
+            if (string.Equals(_inFlightShareUrl, pending, StringComparison.OrdinalIgnoreCase))
+                return;
+
+            for (var attempt = 0; attempt < 40; attempt++)
+            {
+                if (Shell.Current?.CurrentPage?.BindingContext is DownloadViewModel)
+                {
+                    _inFlightShareUrl = pending;
+                    await _settings.SetPendingShareUrlAsync(null).ConfigureAwait(false);
+
+                    await MainThread.InvokeOnMainThreadAsync(() =>
+                        WeakReferenceMessenger.Default.Send(new ShareUrlReceivedMessage(pending)));
+
+                    _ = ClearInFlightShareLaterAsync(pending);
+                    return;
+                }
+
+                await Task.Delay(50).ConfigureAwait(false);
+            }
         }
+        finally
+        {
+            DeliverGate.Release();
+        }
+    }
+
+    private static async Task ClearInFlightShareLaterAsync(string url)
+    {
+        await Task.Delay(2500).ConfigureAwait(false);
+        if (string.Equals(_inFlightShareUrl, url, StringComparison.OrdinalIgnoreCase))
+            _inFlightShareUrl = null;
     }
 
     public static bool TryExtractNormalizedUrl(string? raw, out string normalized)

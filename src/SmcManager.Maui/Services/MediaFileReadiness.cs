@@ -7,18 +7,21 @@ internal static class MediaFileReadiness
 {
     public static async Task WaitForFilesAsync(
         IEnumerable<string> paths,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        int maxTotalMilliseconds = 350)
     {
+        var deadline = Environment.TickCount64 + maxTotalMilliseconds;
+
         foreach (var path in paths.Where(p => !string.IsNullOrWhiteSpace(p)).Distinct(StringComparer.OrdinalIgnoreCase))
         {
-            for (var attempt = 0; attempt < 20; attempt++)
+            while (Environment.TickCount64 < deadline)
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
                 if (IsReady(path))
                     break;
 
-                await Task.Delay(50, cancellationToken).ConfigureAwait(false);
+                await Task.Delay(30, cancellationToken).ConfigureAwait(false);
             }
         }
     }

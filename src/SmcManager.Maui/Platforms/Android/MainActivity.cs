@@ -85,10 +85,20 @@ public class MainActivity : MauiAppCompatActivity
         if (shareService is null)
         {
             Preferences.Default.Set(MauiSettingsService.PendingShareUrlPreferenceKey, normalized);
+            ClearShareIntent();
             return;
         }
 
         _ = shareService.HandleIncomingUrlAsync(text);
+        ClearShareIntent();
+    }
+
+    private void ClearShareIntent()
+    {
+        if (Intent?.Action != Intent.ActionSend)
+            return;
+
+        Intent = new Intent(Intent.ActionMain);
     }
 
     private static ShareLinkService? ResolveShareService() =>

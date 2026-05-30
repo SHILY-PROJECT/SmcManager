@@ -77,15 +77,14 @@ public partial class ContentCardView : ContentView
 
     private async void OnCardTapped(object? sender, TappedEventArgs e)
     {
-        if (Item is null || _isNavigating)
+        if (Item is null || _isNavigating || Shell.Current is null)
             return;
 
         _isNavigating = true;
         try
         {
-            await Shell.Current.GoToAsync(
-                nameof(ContentDetailPage),
-                new Dictionary<string, object> { ["contentId"] = Item.Id.ToString() });
+            var route = $"{nameof(ContentDetailPage)}?contentId={Uri.EscapeDataString(Item.Id.ToString())}";
+            await Shell.Current.GoToAsync(route);
         }
         finally
         {

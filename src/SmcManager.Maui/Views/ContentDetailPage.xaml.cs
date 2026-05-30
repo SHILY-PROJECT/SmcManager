@@ -37,16 +37,41 @@ public partial class ContentDetailPage : ContentPage, IRecipient<ThemeChangedMes
 
         AttachCarouselHandlers();
         ApplyThemedIcons();
-        await vm.LoadForDisplayAsync();
+        _ = LoadPageContentAsync(vm);
+    }
 
+    private async Task LoadPageContentAsync(ContentDetailViewModel vm)
+    {
+        void OnSlidesReady(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName != nameof(ContentDetailViewModel.HasMediaSlides)
+                || !vm.HasMediaSlides
+                || vm.MediaSlides.Count == 0)
+                return;
+
+            vm.PropertyChanged -= OnSlidesReady;
+            _ = InitializeCarouselWhenReadyAsync(vm);
+        }
+
+        vm.PropertyChanged += OnSlidesReady;
+        try
+        {
+            await vm.LoadForDisplayAsync();
+            await InitializeCarouselWhenReadyAsync(vm);
+        }
+        finally
+        {
+            vm.PropertyChanged -= OnSlidesReady;
+        }
+    }
+
+    private async Task InitializeCarouselWhenReadyAsync(ContentDetailViewModel vm)
+    {
         if (vm.MediaSlides.Count == 0)
             return;
 
         try
         {
-#if ANDROID
-            await Task.Delay(120);
-#endif
             await InitializeCarouselAsync(vm);
         }
         catch
@@ -87,7 +112,9 @@ public partial class ContentDetailPage : ContentPage, IRecipient<ThemeChangedMes
             if (MediaCarousel.Handler is not null && vm.MediaSlides.Count > 0)
                 CarouselSlideNavigator.NavigateTo(MediaCarousel, 0, vm.MediaSlides.Count);
 
+#if !ANDROID
             await vm.PrepareCurrentSlideMediaAsync();
+#endif
         }
         finally
         {
@@ -179,7 +206,9 @@ public partial class ContentDetailPage : ContentPage, IRecipient<ThemeChangedMes
             if (MediaCarousel.Handler is not null)
                 CarouselSlideNavigator.NavigateTo(MediaCarousel, position, vm.MediaSlides.Count);
 
+#if !ANDROID
             _ = vm.PrepareCurrentSlideMediaAsync();
+#endif
         }
         finally
         {

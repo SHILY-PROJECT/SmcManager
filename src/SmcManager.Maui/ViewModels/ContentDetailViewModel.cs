@@ -35,6 +35,9 @@ public partial class ContentDetailViewModel : ObservableObject, IQueryAttributab
     private readonly SemaphoreSlim _mediaPrepareGate = new(1, 1);
     private int _loadVersion;
     private CancellationTokenSource? _mediaPrepareCts;
+#if ANDROID
+    private bool _videoPlaybackRequested;
+#endif
 
     public ContentDetailViewModel(
         IContentRepository repository,
@@ -228,6 +231,21 @@ public partial class ContentDetailViewModel : ObservableObject, IQueryAttributab
 
     public bool ShowCarouselNext => HasMultipleSlides && CurrentSlideIndex < MediaSlides.Count - 1;
 
+    public bool ShowVideoPlayPrompt
+    {
+        get
+        {
+#if ANDROID
+            var slide = GetCurrentSlide();
+            return slide is { IsVideo: true }
+                   && !_videoPlaybackRequested
+                   && File.Exists(slide.LocalPath);
+#else
+            return false;
+#endif
+        }
+    }
+
     /// <summary>Запрос смены слайда с экрана (обрабатывается ContentDetailPage).</summary>
     public event Action<int>? SlideNavigationRequested;
 
@@ -238,7 +256,10 @@ public partial class ContentDetailViewModel : ObservableObject, IQueryAttributab
         OnPropertyChanged(nameof(ShowCarouselNext));
         GoToPreviousSlideCommand.NotifyCanExecuteChanged();
         GoToNextSlideCommand.NotifyCanExecuteChanged();
+        NotifyVideoPlayPromptChanged();
     }
+
+    partial void OnShowCurrentVideoPlayerChanged(bool value) => NotifyVideoPlayPromptChanged();
 
     partial void OnHasMultipleSlidesChanged(bool value)
     {
@@ -269,8 +290,26 @@ public partial class ContentDetailViewModel : ObservableObject, IQueryAttributab
             return;
 
         CurrentSlideIndex = position;
+#if ANDROID
+        _videoPlaybackRequested = false;
+        StopCurrentVideo();
+        NotifyVideoPlayPromptChanged();
+#else
         _ = PrepareCurrentSlideMediaAsync();
+#endif
     }
+
+    [RelayCommand]
+    private async Task PlayCurrentVideoAsync()
+    {
+#if ANDROID
+        _videoPlaybackRequested = true;
+        NotifyVideoPlayPromptChanged();
+#endif
+        await PrepareCurrentSlideMediaAsync();
+    }
+
+    private void NotifyVideoPlayPromptChanged() => OnPropertyChanged(nameof(ShowVideoPlayPrompt));
 
     partial void OnIsMediaExpandedChanged(bool value)
     {
@@ -492,8 +531,17 @@ public partial class ContentDetailViewModel : ObservableObject, IQueryAttributab
             if (item is null || version != _loadVersion)
                 return;
 
-            await MediaFileReadiness.WaitForFilesAsync(
-                item.MediaFiles.Select(m => m.LocalPath)).ConfigureAwait(false);
+            var firstMediaPath = item.MediaFiles
+                .OrderBy(m => m.OrderIndex)
+                .Select(m => m.LocalPath)
+                .FirstOrDefault(path => !string.IsNullOrWhiteSpace(path));
+
+            if (!string.IsNullOrWhiteSpace(firstMediaPath))
+            {
+                await MediaFileReadiness.WaitForFilesAsync(
+                    [firstMediaPath],
+                    maxTotalMilliseconds: 200).ConfigureAwait(false);
+            }
 
             if (version != _loadVersion)
                 return;
@@ -514,12 +562,37 @@ public partial class ContentDetailViewModel : ObservableObject, IQueryAttributab
             if (version != _loadVersion)
                 return;
 
-            await LoadTagEditorAsync().ConfigureAwait(false);
+            _ = LoadTagEditorAsync();
+
+            if (MediaSlides.Count == 0 && item.MediaFiles.Count > 0 && version == _loadVersion)
+                _ = RetryLoadMediaWhenReadyAsync(item, id, version);
         }
         finally
         {
             _loadGate.Release();
         }
+    }
+
+    private async Task RetryLoadMediaWhenReadyAsync(ContentItem item, int id, int version)
+    {
+        await MediaFileReadiness.WaitForFilesAsync(
+            item.MediaFiles.OrderBy(m => m.OrderIndex).Select(m => m.LocalPath),
+            maxTotalMilliseconds: 1200).ConfigureAwait(false);
+
+        if (version != _loadVersion || _loadedContentId != id)
+            return;
+
+        var appSettings = await _settings.GetAppSettingsAsync().ConfigureAwait(false);
+        if (version != _loadVersion)
+            return;
+
+        await MainThread.InvokeOnMainThreadAsync(() =>
+        {
+            if (version != _loadVersion || _loadedContentId != id)
+                return;
+
+            ApplyLoadedContent(item, id, appSettings);
+        });
     }
 
     private void ApplyLoadedContent(ContentItem item, int id, AppUserSettings appSettings)
@@ -562,6 +635,9 @@ public partial class ContentDetailViewModel : ObservableObject, IQueryAttributab
         HasMediaSlides = MediaSlides.Count > 0;
         IsMediaExpanded = HasMediaSlides && appSettings.IsContentMediaExpanded;
 
+#if ANDROID
+        _videoPlaybackRequested = false;
+#endif
         CurrentSlideIndex = 0;
         UpdateSlideIndicator();
         ShowCurrentVideoPlayer = false;
@@ -571,6 +647,7 @@ public partial class ContentDetailViewModel : ObservableObject, IQueryAttributab
         OnPropertyChanged(nameof(CanToggleDescription));
         GoToPreviousSlideCommand.NotifyCanExecuteChanged();
         GoToNextSlideCommand.NotifyCanExecuteChanged();
+        NotifyVideoPlayPromptChanged();
     }
 
     public void RefreshCurrentSlideMedia()
@@ -578,20 +655,37 @@ public partial class ContentDetailViewModel : ObservableObject, IQueryAttributab
         try
         {
             var slide = GetCurrentSlide();
+#if ANDROID
+            if (slide is { IsVideo: true } && !_videoPlaybackRequested)
+            {
+                ShowCurrentVideoPlayer = false;
+                CurrentVideoSource = null;
+                NotifyVideoPlayPromptChanged();
+                return;
+            }
+#endif
             if (slide is { IsVideo: true } && File.Exists(slide.LocalPath))
             {
                 ShowCurrentVideoPlayer = true;
-                CurrentVideoSource = MediaSource.FromFile(Path.GetFullPath(slide.LocalPath));
+                var fullPath = Path.GetFullPath(slide.LocalPath);
+#if ANDROID
+                CurrentVideoSource = MediaSource.FromUri(new Uri(fullPath));
+#else
+                CurrentVideoSource = MediaSource.FromFile(fullPath);
+#endif
+                NotifyVideoPlayPromptChanged();
                 return;
             }
 
             ShowCurrentVideoPlayer = false;
             CurrentVideoSource = null;
+            NotifyVideoPlayPromptChanged();
         }
         catch
         {
             ShowCurrentVideoPlayer = false;
             CurrentVideoSource = null;
+            NotifyVideoPlayPromptChanged();
         }
     }
 
@@ -599,6 +693,10 @@ public partial class ContentDetailViewModel : ObservableObject, IQueryAttributab
     {
         ShowCurrentVideoPlayer = false;
         CurrentVideoSource = null;
+#if ANDROID
+        _videoPlaybackRequested = false;
+#endif
+        NotifyVideoPlayPromptChanged();
     }
 
     public async Task PrepareCurrentSlideMediaAsync()
@@ -632,6 +730,10 @@ public partial class ContentDetailViewModel : ObservableObject, IQueryAttributab
 
             if (slide.IsVideo)
             {
+#if ANDROID
+                if (!_videoPlaybackRequested)
+                    return;
+#endif
                 await MediaFileReadiness.WaitForFilesAsync([slide.LocalPath], cts.Token)
                     .ConfigureAwait(false);
             }
