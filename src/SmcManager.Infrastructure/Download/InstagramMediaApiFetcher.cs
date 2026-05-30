@@ -254,7 +254,7 @@ internal static class InstagramMediaApiFetcher
         if (slide.TryGetProperty("video_versions", out var videos) && videos.ValueKind == JsonValueKind.Array)
         {
             string? bestUrl = null;
-            var bestWidth = -1;
+            var bestPixels = -1L;
 
             foreach (var video in videos.EnumerateArray())
             {
@@ -266,9 +266,11 @@ internal static class InstagramMediaApiFetcher
                     continue;
 
                 var width = video.TryGetProperty("width", out var widthProp) ? widthProp.GetInt32() : 0;
-                if (width >= bestWidth)
+                var height = video.TryGetProperty("height", out var heightProp) ? heightProp.GetInt32() : 0;
+                var pixels = (long)Math.Max(width, 0) * Math.Max(height, 0);
+                if (pixels >= bestPixels)
                 {
-                    bestWidth = width;
+                    bestPixels = pixels;
                     bestUrl = url;
                 }
             }
@@ -295,7 +297,7 @@ internal static class InstagramMediaApiFetcher
                 if (string.IsNullOrWhiteSpace(url) || !InstagramHtmlMediaExtractor.IsPostMediaUrl(url))
                     continue;
 
-                var score = InstagramHtmlMediaExtractor.ScoreMediaUrl(url);
+                var score = InstagramHtmlMediaExtractor.ScoreImageCandidate(candidate, url);
                 if (score <= bestScore)
                     continue;
 
@@ -363,7 +365,7 @@ internal static class InstagramMediaApiFetcher
                 if (string.IsNullOrWhiteSpace(url) || !InstagramHtmlMediaExtractor.IsPostMediaUrl(url))
                     continue;
 
-                var score = InstagramHtmlMediaExtractor.ScoreMediaUrl(url);
+                var score = InstagramHtmlMediaExtractor.ScoreImageCandidate(candidate, url);
                 if (score <= bestScore)
                     continue;
 

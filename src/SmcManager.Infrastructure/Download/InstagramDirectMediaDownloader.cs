@@ -59,6 +59,8 @@ internal static class InstagramDirectMediaDownloader
             if (mediaUrls.Count == 0)
                 return [];
 
+            mediaUrls = InstagramHtmlMediaExtractor.SelectBestDistinctUrls(mediaUrls).ToList();
+
             Directory.CreateDirectory(outputDir);
 
             using var client = InstagramMediaApiFetcher.CreateHttpClient(account);

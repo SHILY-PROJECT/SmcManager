@@ -484,7 +484,22 @@ public sealed class YtdlpHostService
 
                 if (!result.Success && platform is SocialPlatform.Instagram or SocialPlatform.Vkontakte)
                 {
-                    if (!isVideoContent && YtdlpQualityBuilder.ShouldRetryInstagramMedia(format, logText))
+                    if (!isVideoContent && YtdlpQualityBuilder.ShouldRetryWithAllFormats(format, logText))
+                    {
+                        result = await _client.RunVideoDownload(
+                            downloadUrl,
+                            "all",
+                            mergeFormat,
+                            VideoRecodeFormat.None,
+                            cancellationToken,
+                            overrideOptions: options);
+                        logText = BuildLogText(result.ErrorOutput, result.Data as string);
+                        format = "all";
+                    }
+
+                    if (!result.Success
+                        && !isVideoContent
+                        && YtdlpQualityBuilder.ShouldRetryInstagramMedia(format, logText))
                     {
                         result = await _client.RunVideoDownload(
                             downloadUrl,
@@ -512,20 +527,6 @@ public sealed class YtdlpHostService
                             overrideOptions: options);
                         logText = BuildLogText(result.ErrorOutput, result.Data as string);
                         format = retryFormat;
-                    }
-
-                    if (!result.Success
-                        && !isVideoContent
-                        && YtdlpQualityBuilder.ShouldRetryWithAllFormats(format, logText))
-                    {
-                        result = await _client.RunVideoDownload(
-                            downloadUrl,
-                            "all",
-                            mergeFormat,
-                            VideoRecodeFormat.None,
-                            cancellationToken,
-                            overrideOptions: options);
-                        logText = BuildLogText(result.ErrorOutput, result.Data as string);
                     }
                 }
                 else if (!result.Success && YtdlpQualityBuilder.ShouldRetryWithPlainBest(format, logText))

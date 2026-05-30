@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using YoutubeDLSharp.Metadata;
 
@@ -19,6 +20,9 @@ internal static partial class InstagramHtmlMediaExtractor
     [GeneratedRegex(@"(?<id>\d+_\d+_n)\.(?<ext>jpg|jpeg|webp|mp4)", RegexOptions.IgnoreCase)]
     private static partial Regex MediaIdRegex();
 
+    [GeneratedRegex(@"(?<=[/_-])(?<dim>[sp]\d+x\d+|\d+x\d+)(?=[/_-])", RegexOptions.IgnoreCase)]
+    private static partial Regex EmbeddedDimensionRegex();
+
     public static IReadOnlyList<string> FromHtml(string html)
     {
         if (string.IsNullOrWhiteSpace(html)) return [];
@@ -38,9 +42,19 @@ internal static partial class InstagramHtmlMediaExtractor
             TryAddCandidate(candidates, url, ref order);
         }
 
+        return SelectBestDistinctUrls(candidates.Values.Select(x => x.Url));
+    }
+
+    public static IReadOnlyList<string> SelectBestDistinctUrls(IEnumerable<string> urls)
+    {
+        var candidates = new Dictionary<string, (string Url, int Score, int Order)>(StringComparer.OrdinalIgnoreCase);
+        var order = 0;
+
+        foreach (var url in urls)
+            TryAddCandidate(candidates, url, ref order);
+
         return candidates.Values
             .OrderBy(x => x.Order)
-            .ThenByDescending(x => x.Score)
             .Select(x => x.Url)
             .ToList();
     }
@@ -125,7 +139,9 @@ internal static partial class InstagramHtmlMediaExtractor
             return false;
 
         if (url.Contains("s150x150", StringComparison.OrdinalIgnoreCase)
-            || url.Contains("s320x320", StringComparison.OrdinalIgnoreCase))
+            || url.Contains("s320x320", StringComparison.OrdinalIgnoreCase)
+            || url.Contains("s640x640", StringComparison.OrdinalIgnoreCase)
+            || url.Contains("p640x640", StringComparison.OrdinalIgnoreCase))
             return false;
 
         if (!HasMediaExtension(url))
@@ -185,15 +201,49 @@ internal static partial class InstagramHtmlMediaExtractor
         if (url.Contains(".mp4", StringComparison.OrdinalIgnoreCase)
             || url.Contains("stp=dst-mp4", StringComparison.OrdinalIgnoreCase))
             score += 500;
-        if (url.Contains("p1080x1080", StringComparison.OrdinalIgnoreCase)) score += 300;
-        if (url.Contains("1080", StringComparison.Ordinal)) score += 200;
-        if (url.Contains("1440", StringComparison.Ordinal)) score += 250;
+
+        score += ScoreDimensionsFromUrl(url);
+
         if (url.Contains("/v/t51.", StringComparison.OrdinalIgnoreCase)) score += 150;
         if (url.Contains("/v/t39.", StringComparison.OrdinalIgnoreCase)) score += 80;
         if (!url.Contains("s640x640", StringComparison.OrdinalIgnoreCase)) score += 80;
+        if (!url.Contains("p640x640", StringComparison.OrdinalIgnoreCase)) score += 80;
         if (!url.Contains("s150x150", StringComparison.OrdinalIgnoreCase)) score += 40;
         score += Math.Min(url.Length / 20, 100);
         return score;
+    }
+
+    internal static int ScoreImageCandidate(JsonElement candidate, string url)
+    {
+        var width = candidate.TryGetProperty("width", out var widthProp) ? widthProp.GetInt32() : 0;
+        var height = candidate.TryGetProperty("height", out var heightProp) ? heightProp.GetInt32() : 0;
+        var pixels = (long)Math.Max(width, 0) * Math.Max(height, 0);
+        if (pixels > 0)
+            return (int)Math.Min(pixels / 100, 2_000_000);
+
+        return ScoreMediaUrl(url);
+    }
+
+    private static int ScoreDimensionsFromUrl(string url)
+    {
+        var bestArea = 0;
+
+        foreach (Match match in EmbeddedDimensionRegex().Matches(url))
+        {
+            var dim = match.Groups["dim"].Value;
+            var parts = dim.Split('x', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            if (parts.Length != 2
+                || !int.TryParse(parts[0].TrimStart('s', 'S', 'p', 'P'), out var width)
+                || !int.TryParse(parts[1], out var height))
+                continue;
+
+            bestArea = Math.Max(bestArea, width * height);
+        }
+
+        if (bestArea <= 0)
+            return 0;
+
+        return Math.Min(bestArea / 100, 2_000_000);
     }
 
     private static string DecodeHtmlUrl(string url) =>

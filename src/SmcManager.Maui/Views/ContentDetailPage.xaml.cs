@@ -42,11 +42,17 @@ public partial class ContentDetailPage : ContentPage, IRecipient<ThemeChangedMes
         if (vm.MediaSlides.Count == 0)
             return;
 
-        await Dispatcher.DispatchAsync(async () =>
+        try
         {
-            ApplyCarouselPosition(vm.CurrentSlideIndex);
-            await vm.PrepareCurrentSlideMediaAsync();
-        });
+#if ANDROID
+            await Task.Delay(120);
+#endif
+            await InitializeCarouselAsync(vm);
+        }
+        catch
+        {
+            // carousel init is best-effort; avoid crash on freshly downloaded media
+        }
     }
 
     protected override void OnDisappearing()
@@ -66,6 +72,27 @@ public partial class ContentDetailPage : ContentPage, IRecipient<ThemeChangedMes
         WeakReferenceMessenger.Default.Unregister<ThemeChangedMessage>(this);
         DetachCarouselHandlers();
         base.OnDisappearing();
+    }
+
+    private async Task InitializeCarouselAsync(ContentDetailViewModel vm)
+    {
+        _isUpdatingCarousel = true;
+        try
+        {
+            if (MediaCarousel.Handler is null)
+                await Task.Delay(100);
+
+            vm.CurrentSlideIndex = 0;
+
+            if (MediaCarousel.Handler is not null && vm.MediaSlides.Count > 0)
+                CarouselSlideNavigator.NavigateTo(MediaCarousel, 0, vm.MediaSlides.Count);
+
+            await vm.PrepareCurrentSlideMediaAsync();
+        }
+        finally
+        {
+            _isUpdatingCarousel = false;
+        }
     }
 
     private void OnSlideNavigationRequested(int position) => ApplyCarouselPosition(position);
@@ -149,10 +176,10 @@ public partial class ContentDetailPage : ContentPage, IRecipient<ThemeChangedMes
             if (vm.CurrentSlideIndex != position)
                 vm.CurrentSlideIndex = position;
 
-            _ = vm.PrepareCurrentSlideMediaAsync();
-
             if (MediaCarousel.Handler is not null)
                 CarouselSlideNavigator.NavigateTo(MediaCarousel, position, vm.MediaSlides.Count);
+
+            _ = vm.PrepareCurrentSlideMediaAsync();
         }
         finally
         {

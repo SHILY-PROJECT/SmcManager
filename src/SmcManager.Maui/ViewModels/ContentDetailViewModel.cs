@@ -32,7 +32,9 @@ public partial class ContentDetailViewModel : ObservableObject, IQueryAttributab
     private ContentItem? _content;
     private DateTime _enteredAtUtc;
     private readonly SemaphoreSlim _loadGate = new(1, 1);
+    private readonly SemaphoreSlim _mediaPrepareGate = new(1, 1);
     private int _loadVersion;
+    private CancellationTokenSource? _mediaPrepareCts;
 
     public ContentDetailViewModel(
         IContentRepository repository,
@@ -60,10 +62,16 @@ public partial class ContentDetailViewModel : ObservableObject, IQueryAttributab
 
     public void ApplyQueryAttributes(IDictionary<string, object> query)
     {
-        if (query.TryGetValue("contentId", out var value))
-            ContentId = value?.ToString() ?? string.Empty;
+        if (!query.TryGetValue("contentId", out var value))
+            return;
 
+        var newId = value?.ToString() ?? string.Empty;
+        if (string.Equals(ContentId, newId, StringComparison.Ordinal))
+            return;
+
+        ContentId = newId;
         _enteredAtUtc = DateTime.UtcNow;
+        _loadedContentId = 0;
 
         if (int.TryParse(ContentId, out _))
             _ = LoadAsync();
@@ -484,6 +492,12 @@ public partial class ContentDetailViewModel : ObservableObject, IQueryAttributab
             if (item is null || version != _loadVersion)
                 return;
 
+            await MediaFileReadiness.WaitForFilesAsync(
+                item.MediaFiles.Select(m => m.LocalPath)).ConfigureAwait(false);
+
+            if (version != _loadVersion)
+                return;
+
             var appSettings = await _settings.GetAppSettingsAsync().ConfigureAwait(false);
             if (version != _loadVersion)
                 return;
@@ -493,6 +507,7 @@ public partial class ContentDetailViewModel : ObservableObject, IQueryAttributab
                 if (version != _loadVersion)
                     return;
 
+                StopCurrentVideo();
                 ApplyLoadedContent(item, id, appSettings);
             });
 
@@ -588,17 +603,52 @@ public partial class ContentDetailViewModel : ObservableObject, IQueryAttributab
 
     public async Task PrepareCurrentSlideMediaAsync()
     {
-        ShowCurrentVideoPlayer = false;
-        CurrentVideoSource = null;
+        _mediaPrepareCts?.Cancel();
+        var cts = new CancellationTokenSource();
+        _mediaPrepareCts = cts;
 
-        if (MediaSlides.Count == 0)
-            return;
+        await _mediaPrepareGate.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            if (cts.IsCancellationRequested)
+                return;
+
+            await MainThread.InvokeOnMainThreadAsync(() =>
+            {
+                ShowCurrentVideoPlayer = false;
+                CurrentVideoSource = null;
+            });
+
+            if (MediaSlides.Count == 0)
+                return;
 
 #if ANDROID
-        await Task.Delay(450).ConfigureAwait(false);
+            await Task.Delay(450, cts.Token).ConfigureAwait(false);
 #endif
 
-        await MainThread.InvokeOnMainThreadAsync(RefreshCurrentSlideMedia);
+            var slide = GetCurrentSlide();
+            if (slide is null)
+                return;
+
+            if (slide.IsVideo)
+            {
+                await MediaFileReadiness.WaitForFilesAsync([slide.LocalPath], cts.Token)
+                    .ConfigureAwait(false);
+            }
+
+            if (cts.IsCancellationRequested)
+                return;
+
+            await MainThread.InvokeOnMainThreadAsync(RefreshCurrentSlideMedia);
+        }
+        catch (OperationCanceledException)
+        {
+            // ignore stale prepare requests
+        }
+        finally
+        {
+            _mediaPrepareGate.Release();
+        }
     }
 
     private void UpdateSlideIndicator() =>
