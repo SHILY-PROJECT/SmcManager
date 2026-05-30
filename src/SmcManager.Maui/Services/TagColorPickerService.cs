@@ -27,24 +27,29 @@ public sealed class TagColorPickerService(IServiceProvider services)
         try
         {
             await using var reg = cancellationToken.Register(() => tcs.TrySetResult(null));
-            return await tcs.Task.ConfigureAwait(false);
+            var result = await tcs.Task;
+            return result is null
+                ? null
+                : await MainThread.InvokeOnMainThreadAsync(() => result);
         }
         finally
         {
-            if (navigation.ModalStack.Count > 0)
+            await MainThread.InvokeOnMainThreadAsync(async () =>
             {
-                try
+                if (navigation.ModalStack.Count > 0)
                 {
-                    await MainThread.InvokeOnMainThreadAsync(() =>
-                        navigation.PopModalAsync(animated: true));
+                    try
+                    {
+                        await navigation.PopModalAsync(animated: true);
+                    }
+                    catch
+                    {
+                        // already closed
+                    }
                 }
-                catch
-                {
-                    // already closed
-                }
-            }
 
-            TagColorPickerNavigationContext.Current = null;
+                TagColorPickerNavigationContext.Current = null;
+            });
         }
     }
 }

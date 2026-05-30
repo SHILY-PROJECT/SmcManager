@@ -72,8 +72,11 @@ public partial class TagsViewModel : ObservableObject,
     private async Task PickNewTagColorAsync()
     {
         var color = await _colorPicker.PickColorAsync(SelectedColor);
-        if (color is not null)
-            SelectedColor = color;
+        if (color is null)
+            return;
+
+        await MainThread.InvokeOnMainThreadAsync(() =>
+            SelectedColor = TagColorHelper.NormalizeHex(color));
     }
 
     [RelayCommand]
@@ -83,8 +86,11 @@ public partial class TagsViewModel : ObservableObject,
             return;
 
         var color = await _colorPicker.PickColorAsync(row.EditColorHex);
-        if (color is not null)
-            row.EditColorHex = TagColorHelper.NormalizeHex(color);
+        if (color is null)
+            return;
+
+        var normalized = TagColorHelper.NormalizeHex(color);
+        await MainThread.InvokeOnMainThreadAsync(() => row.EditColorHex = normalized);
     }
 
     [RelayCommand]
@@ -165,13 +171,25 @@ public partial class TagsViewModel : ObservableObject,
 
     private async Task LoadAsync()
     {
+        var editingState = Tags
+            .Where(t => t.IsEditing)
+            .ToDictionary(t => t.Tag.Id, t => (t.EditName, t.EditColorHex));
+
         var tags = await _tagList.GetSortedTagsAsync();
         var usageCounts = await _repository.GetTagUsageCountsAsync();
         Tags.Clear();
         foreach (var tag in tags)
         {
             usageCounts.TryGetValue(tag.Id, out var usage);
-            Tags.Add(new TagRowViewModel(tag, usage));
+            var row = new TagRowViewModel(tag, usage);
+            if (editingState.TryGetValue(tag.Id, out var edit))
+            {
+                row.EditName = edit.EditName;
+                row.EditColorHex = edit.EditColorHex;
+                row.IsEditing = true;
+            }
+
+            Tags.Add(row);
         }
     }
 }
