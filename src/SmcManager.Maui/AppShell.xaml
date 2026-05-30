@@ -82,7 +82,7 @@
         </Grid>
     </Shell.FlyoutContent>
 
-    <FlyoutItem Title="Скачать"
+    <FlyoutItem Title="Главная"
                 Route="download"
                 Shell.FlyoutItemIsVisible="False">
         <ShellContent ContentTemplate="{DataTemplate views:DownloadPage}" />

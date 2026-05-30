@@ -28,6 +28,9 @@ public partial class ContentDetailViewModel : ObservableObject, IRecipient<TagsC
     private readonly IAppStoragePaths _storagePaths;
     private readonly ISettingsService _settings;
     private readonly TagListService _tagList;
+    private readonly TagCreationService _tagCreation;
+    private readonly TagColorPickerService _colorPicker;
+    private readonly BottomToastService _toast;
 
     private ContentItem? _content;
     private DateTime _enteredAtUtc;
@@ -39,13 +42,18 @@ public partial class ContentDetailViewModel : ObservableObject, IRecipient<TagsC
     private bool _videoPlaybackRequested;
 #endif
 
+    public IReadOnlyList<string> EmojiSuggestions { get; } = TagEmojiLibrary.Suggested;
+
     public ContentDetailViewModel(
         IContentRepository repository,
         IFileExplorerService fileExplorer,
         ILinkLauncherService linkLauncher,
         IAppStoragePaths storagePaths,
         ISettingsService settings,
-        TagListService tagList)
+        TagListService tagList,
+        TagCreationService tagCreation,
+        TagColorPickerService colorPicker,
+        BottomToastService toast)
     {
         _repository = repository;
         _fileExplorer = fileExplorer;
@@ -53,6 +61,9 @@ public partial class ContentDetailViewModel : ObservableObject, IRecipient<TagsC
         _storagePaths = storagePaths;
         _settings = settings;
         _tagList = tagList;
+        _tagCreation = tagCreation;
+        _colorPicker = colorPicker;
+        _toast = toast;
         WeakReferenceMessenger.Default.Register<TagsChangedMessage>(this);
         WeakReferenceMessenger.Default.Register<TagSortChangedMessage>(this);
     }
@@ -80,6 +91,18 @@ public partial class ContentDetailViewModel : ObservableObject, IRecipient<TagsC
     public ObservableCollection<MediaSlideViewModel> MediaSlides { get; } = [];
 
     public ObservableCollection<TagChipViewModel> TagChips { get; } = [];
+
+    [ObservableProperty]
+    private bool _isNewTagPanelVisible;
+
+    [ObservableProperty]
+    private string _newTagName = string.Empty;
+
+    [ObservableProperty]
+    private string _selectedTagColor = TagColorPresets.Default;
+
+    [ObservableProperty]
+    private string? _newTagStatusMessage;
 
     [ObservableProperty]
     private string _authorTitle = string.Empty;
@@ -141,7 +164,7 @@ public partial class ContentDetailViewModel : ObservableObject, IRecipient<TagsC
 
     private const double DefaultMediaHeight = 320;
 
-    private const double CarouselNavButtonSize = 44;
+    private const double CarouselNavButtonSize = 48;
 
     private const double CarouselPagerHeight = 42;
 
@@ -401,6 +424,66 @@ public partial class ContentDetailViewModel : ObservableObject, IRecipient<TagsC
 
     [RelayCommand]
     private void CancelCommentEdit() => IsEditingComment = false;
+
+    [RelayCommand]
+    private void ToggleNewTagPanel() => IsNewTagPanelVisible = !IsNewTagPanelVisible;
+
+    [RelayCommand]
+    private void AppendEmoji(string emoji)
+    {
+        if (string.IsNullOrWhiteSpace(emoji))
+            return;
+
+        var trimmed = NewTagName.Trim();
+        if (trimmed.StartsWith(emoji, StringComparison.Ordinal))
+            return;
+
+        var combined = string.IsNullOrWhiteSpace(trimmed) ? $"{emoji} " : $"{emoji} {trimmed}";
+        NewTagName = combined.Length <= 32 ? combined : NewTagName;
+    }
+
+    [RelayCommand]
+    private async Task PickNewTagColorAsync()
+    {
+        var color = await _colorPicker.PickColorAsync(
+            SelectedTagColor,
+            hex => SelectedTagColor = TagColorHelper.NormalizeHex(hex));
+        if (color is null)
+            return;
+
+        await MainThread.InvokeOnMainThreadAsync(() =>
+            SelectedTagColor = TagColorHelper.NormalizeHex(color));
+    }
+
+    [RelayCommand]
+    private async Task AddContentTagAsync()
+    {
+        if (_content is null)
+            return;
+
+        var (success, tag, error) = await _tagCreation.TryCreateAsync(NewTagName, SelectedTagColor);
+        if (!success)
+        {
+            await _toast.ShowWarningAsync(error ?? "Введите название тега.");
+            return;
+        }
+
+        NewTagName = string.Empty;
+        SelectedTagColor = TagColorHelper.DefaultHex;
+        IsNewTagPanelVisible = false;
+
+        var tagIds = _content.Tags.Select(t => t.Id).ToHashSet();
+        tagIds.Add(tag!.Id);
+        await _repository.AssignTagsAsync(_content.Id, tagIds.ToList());
+
+        var updated = await _repository.GetContentByIdAsync(_content.Id);
+        if (updated is not null)
+            _content = updated;
+
+        await LoadTagEditorAsync();
+        WeakReferenceMessenger.Default.Send(new TagsChangedMessage());
+        NewTagStatusMessage = $"Тег «{tag!.Name}» добавлен и назначен.";
+    }
 
     [RelayCommand]
     private async Task ToggleContentTagAsync(TagChipViewModel chip)

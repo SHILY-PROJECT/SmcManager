@@ -65,7 +65,7 @@ public partial class AppShell : Shell, IRecipient<ThemeChangedMessage>
 
     private void InitializeFlyoutMenu()
     {
-        FlyoutMenuItems.Add(new FlyoutMenuItem("Скачать", "download"));
+        FlyoutMenuItems.Add(new FlyoutMenuItem("Главная", "download"));
         FlyoutMenuItems.Add(new FlyoutMenuItem("Контент", "library"));
         FlyoutMenuItems.Add(new FlyoutMenuItem("Группы", "groups"));
         FlyoutMenuItems.Add(new FlyoutMenuItem("Теги", "tags"));

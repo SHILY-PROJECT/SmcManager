@@ -9,11 +9,11 @@
              x:Class="SmcManager.Maui.Views.DownloadPage"
              x:DataType="vm:DownloadViewModel"
              Shell.NavBarIsVisible="False"
-             Title="Скачать"
+             Title="Главная"
              BackgroundColor="{DynamicResource BackgroundPrimary}">
     <Grid RowDefinitions="Auto,*">
         <controls:AppHeaderView Grid.Row="0"
-                                Title="Скачать"
+                                Title="Главная"
                                 ShowTitle="True" />
         <ScrollView Grid.Row="1">
             <VerticalStackLayout Padding="20,0,20,16" Spacing="16">

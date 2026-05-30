@@ -23,23 +23,17 @@
         <ScrollView Grid.Row="1">
             <VerticalStackLayout Padding="16,16,16,8" Spacing="16">
             <Grid IsVisible="{Binding HasMediaSlides}"
-                  ColumnDefinitions="44,*,44"
+                  ColumnDefinitions="48,*,48"
                   ColumnSpacing="6"
                   HeightRequest="{Binding MediaCarouselHeight}">
-                <Border Grid.Column="0"
-                        HeightRequest="{Binding MediaContentHeight}"
-                        VerticalOptions="Start"
-                        StrokeThickness="0"
-                        BackgroundColor="Transparent"
-                        Padding="0">
-                    <ImageButton x:Name="CarouselPrevButton"
-                                 Style="{StaticResource CarouselNavButtonStyle}"
-                                 Command="{Binding GoToPreviousSlideCommand}"
-                                 IsVisible="{Binding ShowCarouselPrevious}"
-                                 VerticalOptions="Center"
-                                 HorizontalOptions="Center"
-                                 SemanticProperties.Description="Предыдущий слайд" />
-                </Border>
+                <Button x:Name="CarouselPrevButton"
+                        Grid.Column="0"
+                        Style="{StaticResource SecondaryIconButtonStyle}"
+                        Command="{Binding GoToPreviousSlideCommand}"
+                        IsVisible="{Binding ShowCarouselPrevious}"
+                        VerticalOptions="Center"
+                        HorizontalOptions="Center"
+                        SemanticProperties.Description="Предыдущий слайд" />
 
                 <Grid Grid.Column="1"
                       RowDefinitions="*,Auto">
@@ -121,20 +115,14 @@
                     </VerticalStackLayout>
                 </Grid>
 
-                <Border Grid.Column="2"
-                        HeightRequest="{Binding MediaContentHeight}"
-                        VerticalOptions="Start"
-                        StrokeThickness="0"
-                        BackgroundColor="Transparent"
-                        Padding="0">
-                    <ImageButton x:Name="CarouselNextButton"
-                                 Style="{StaticResource CarouselNavButtonStyle}"
-                                 Command="{Binding GoToNextSlideCommand}"
-                                 IsVisible="{Binding ShowCarouselNext}"
-                                 VerticalOptions="Center"
-                                 HorizontalOptions="Center"
-                                 SemanticProperties.Description="Следующий слайд" />
-                </Border>
+                <Button x:Name="CarouselNextButton"
+                        Grid.Column="2"
+                        Style="{StaticResource SecondaryIconButtonStyle}"
+                        Command="{Binding GoToNextSlideCommand}"
+                        IsVisible="{Binding ShowCarouselNext}"
+                        VerticalOptions="Center"
+                        HorizontalOptions="Center"
+                        SemanticProperties.Description="Следующий слайд" />
             </Grid>
 
             <Label Text="{Binding AuthorTitle}"
@@ -152,31 +140,103 @@
                 <Border Style="{StaticResource CardBorderStyle}"
                         Margin="0,8,0,0"
                         Padding="4,4,4,10">
-                    <CollectionView x:Name="TagChipsView"
-                                    ItemsSource="{Binding TagChips}"
-                                    HeightRequest="45"
-                                    SelectionMode="None">
-                        <CollectionView.ItemsLayout>
-                            <LinearItemsLayout Orientation="Horizontal"
-                                               ItemSpacing="6" />
-                        </CollectionView.ItemsLayout>
-                        <CollectionView.ItemTemplate>
-                            <DataTemplate x:DataType="models:TagChipViewModel">
-                                <controls:TagChipView Text="{Binding Name}"
-                                                      ColorHex="{Binding ColorHex}"
-                                                      IsSelected="{Binding IsSelected}"
-                                                      SelectCommand="{Binding Source={RelativeSource AncestorType={x:Type vm:ContentDetailViewModel}}, Path=ToggleContentTagCommand}"
-                                                      SelectParameter="{Binding .}"
-                                                      VerticalOptions="Center" />
-                            </DataTemplate>
-                        </CollectionView.ItemTemplate>
-                        <CollectionView.EmptyView>
-                            <Label Text="Нет тегов — создайте их на вкладке «Теги»"
-                                   TextColor="{DynamicResource TextMuted}"
-                                   FontSize="13"
-                                   LineBreakMode="WordWrap" />
-                        </CollectionView.EmptyView>
-                    </CollectionView>
+                    <VerticalStackLayout Spacing="12">
+                        <Grid ColumnDefinitions="*,Auto"
+                              ColumnSpacing="8"
+                              HeightRequest="40">
+                            <CollectionView Grid.Column="0"
+                                            ItemsSource="{Binding TagChips}"
+                                            HeightRequest="40"
+                                            SelectionMode="None">
+                                <CollectionView.ItemsLayout>
+                                    <LinearItemsLayout Orientation="Horizontal"
+                                                       ItemSpacing="6" />
+                                </CollectionView.ItemsLayout>
+                                <CollectionView.ItemTemplate>
+                                    <DataTemplate x:DataType="models:TagChipViewModel">
+                                        <controls:TagChipView Text="{Binding Name}"
+                                                              ColorHex="{Binding ColorHex}"
+                                                              IsSelected="{Binding IsSelected}"
+                                                              SelectCommand="{Binding Source={RelativeSource AncestorType={x:Type vm:ContentDetailViewModel}}, Path=ToggleContentTagCommand}"
+                                                              SelectParameter="{Binding .}"
+                                                              VerticalOptions="Center" />
+                                    </DataTemplate>
+                                </CollectionView.ItemTemplate>
+                                <CollectionView.EmptyView>
+                                    <Label Text="Нет тегов"
+                                           TextColor="{DynamicResource TextMuted}"
+                                           FontSize="13"
+                                           VerticalOptions="Center" />
+                                </CollectionView.EmptyView>
+                            </CollectionView>
+                            <ImageButton Grid.Column="1"
+                                         WidthRequest="40"
+                                         HeightRequest="40"
+                                         Style="{StaticResource TagRowActionButtonStyle}"
+                                         Source="{DynamicResource AddTagIcon}"
+                                         VerticalOptions="Center"
+                                         Command="{Binding ToggleNewTagPanelCommand}"
+                                         SemanticProperties.Description="Добавить новый тег" />
+                        </Grid>
+
+                        <VerticalStackLayout Spacing="14"
+                                             IsVisible="{Binding IsNewTagPanelVisible}">
+                            <Label Text="Новый тег"
+                                   Style="{StaticResource SectionTitleStyle}"
+                                   FontSize="18" />
+                            <Label Text="Быстрые эмодзи"
+                                   Style="{StaticResource SectionSubtitleStyle}" />
+                            <CollectionView ItemsSource="{Binding EmojiSuggestions}"
+                                            HeightRequest="44"
+                                            SelectionMode="None">
+                                <CollectionView.ItemsLayout>
+                                    <LinearItemsLayout Orientation="Horizontal"
+                                                       ItemSpacing="6" />
+                                </CollectionView.ItemsLayout>
+                                <CollectionView.ItemTemplate>
+                                    <DataTemplate x:DataType="x:String">
+                                        <Button Text="{Binding .}"
+                                                Style="{StaticResource SecondaryButtonStyle}"
+                                                FontSize="20"
+                                                Padding="10,4"
+                                                MinimumWidthRequest="44"
+                                                MinimumHeightRequest="40"
+                                                Command="{Binding Source={RelativeSource AncestorType={x:Type vm:ContentDetailViewModel}}, Path=AppendEmojiCommand}"
+                                                CommandParameter="{Binding .}" />
+                                    </DataTemplate>
+                                </CollectionView.ItemTemplate>
+                            </CollectionView>
+                            <Grid ColumnDefinitions="*,Auto,Auto"
+                                  ColumnSpacing="8">
+                                <Border Grid.Column="0"
+                                        Style="{StaticResource InputBorderStyle}"
+                                        HeightRequest="48"
+                                        VerticalOptions="Center">
+                                    <Entry Text="{Binding NewTagName}"
+                                           Placeholder="Название тега (можно с эмодзи 🍕)"
+                                           Style="{StaticResource EmojiCapableEntryStyle}"
+                                           TextColor="{DynamicResource TextPrimary}"
+                                           PlaceholderColor="{DynamicResource TextMuted}"
+                                           MaxLength="32"
+                                           VerticalOptions="Center" />
+                                </Border>
+                                <controls:TagColorPickerView Grid.Column="1"
+                                                             SelectedColor="{Binding SelectedTagColor}"
+                                                             PickColorCommand="{Binding PickNewTagColorCommand}"
+                                                             VerticalOptions="Center" />
+                                <Button Grid.Column="2"
+                                        Style="{StaticResource PrimaryIconButtonStyle}"
+                                        VerticalOptions="Center"
+                                        ImageSource="{DynamicResource AddTagIcon}"
+                                        Command="{Binding AddContentTagCommand}"
+                                        SemanticProperties.Description="Добавить тег" />
+                            </Grid>
+                            <Label Text="{Binding NewTagStatusMessage}"
+                                   Style="{StaticResource EmojiCapableLabelStyle}"
+                                   TextColor="{DynamicResource AccentSecondary}"
+                                   FontSize="13" />
+                        </VerticalStackLayout>
+                    </VerticalStackLayout>
                 </Border>
             </toolkit:Expander>
 
