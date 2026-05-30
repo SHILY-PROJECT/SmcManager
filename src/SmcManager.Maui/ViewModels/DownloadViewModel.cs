@@ -110,11 +110,6 @@ public partial class DownloadViewModel : ObservableObject,
     public bool ShowPreviewDownloadButton =>
         ShowLinkPreview && !IsLoadingLinkMetadata;
 
-    public bool ShowFallbackDownloadButton =>
-        !ShowLinkPreview
-        && !IsLoadingLinkMetadata
-        && !string.IsNullOrWhiteSpace(ResolveActiveDownloadUrl());
-
     [ObservableProperty]
     private string _url = string.Empty;
 
@@ -170,14 +165,12 @@ public partial class DownloadViewModel : ObservableObject,
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsLoadingLinkMetadata))]
     [NotifyPropertyChangedFor(nameof(ShowPreviewDownloadButton))]
-    [NotifyPropertyChangedFor(nameof(ShowFallbackDownloadButton))]
     [NotifyPropertyChangedFor(nameof(ShowLinkMetadataReady))]
     private bool _isLoadingQualities;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsLoadingLinkMetadata))]
     [NotifyPropertyChangedFor(nameof(ShowPreviewDownloadButton))]
-    [NotifyPropertyChangedFor(nameof(ShowFallbackDownloadButton))]
     [NotifyPropertyChangedFor(nameof(ShowLinkMetadataReady))]
     private bool _isLoadingPreview;
 
@@ -185,7 +178,6 @@ public partial class DownloadViewModel : ObservableObject,
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowPreviewDownloadButton))]
-    [NotifyPropertyChangedFor(nameof(ShowFallbackDownloadButton))]
     [NotifyPropertyChangedFor(nameof(ShowLinkMetadataReady))]
     [NotifyPropertyChangedFor(nameof(ShowPreviewAccountIndicators))]
     private bool _showLinkPreview;
@@ -249,7 +241,6 @@ public partial class DownloadViewModel : ObservableObject,
     partial void OnUrlChanged(string value)
     {
         OnPropertyChanged(nameof(HasUrl));
-        OnPropertyChanged(nameof(ShowFallbackDownloadButton));
 
         if (!_suppressUrlNormalization && !string.IsNullOrWhiteSpace(value))
             _holdDownloadFormClear = false;
@@ -278,7 +269,6 @@ public partial class DownloadViewModel : ObservableObject,
         UpdatePreviewAccountIndicators();
         OnPropertyChanged(nameof(ShowPreviewAccountIndicators));
         OnPropertyChanged(nameof(ShowPreviewDownloadButton));
-        OnPropertyChanged(nameof(ShowFallbackDownloadButton));
     }
 
     partial void OnPreviewUsesAuthenticatedAccountChanged(bool value) =>
@@ -346,7 +336,6 @@ public partial class DownloadViewModel : ObservableObject,
         await MainThread.InvokeOnMainThreadAsync(() =>
         {
             ClearLinkMetadataUi();
-            OnPropertyChanged(nameof(ShowFallbackDownloadButton));
         });
     }
 
@@ -445,7 +434,6 @@ public partial class DownloadViewModel : ObservableObject,
 
             IsLoadingPreview = true;
             IsLoadingQualities = true;
-            OnPropertyChanged(nameof(ShowFallbackDownloadButton));
         });
     }
 
@@ -601,7 +589,6 @@ public partial class DownloadViewModel : ObservableObject,
             {
                 IsLoadingPreview = true;
                 IsLoadingQualities = true;
-                OnPropertyChanged(nameof(ShowFallbackDownloadButton));
             });
 
             var url = await EnsureCleanUrlInFieldAsync(Url).ConfigureAwait(false);
@@ -705,7 +692,6 @@ public partial class DownloadViewModel : ObservableObject,
         {
             _pendingDownloadUrl = ContentUrlNormalizer.Normalize(activeUrl!);
             ClearUrlFieldOnly();
-            OnPropertyChanged(nameof(ShowFallbackDownloadButton));
         }
 
         QualityOptions.Clear();
@@ -805,8 +791,6 @@ public partial class DownloadViewModel : ObservableObject,
     {
         IsLoadingPreview = false;
         IsLoadingQualities = false;
-        OnPropertyChanged(nameof(ShowFallbackDownloadButton));
-
         if (ShowLinkPreview && !string.IsNullOrWhiteSpace(PreviewThumbnail))
             _ = LoadPreviewImageAsync(PreviewThumbnail);
     }
@@ -844,7 +828,6 @@ public partial class DownloadViewModel : ObservableObject,
         ClearLinkMetadataUi();
         ResetAccountPickerUi();
         OnPropertyChanged(nameof(HasUrl));
-        OnPropertyChanged(nameof(ShowFallbackDownloadButton));
     }
 
     private void ClearUrlFieldOnly()
@@ -868,7 +851,6 @@ public partial class DownloadViewModel : ObservableObject,
         _pendingDownloadUrl = null;
         _previewPlatform = null;
         ShowLinkPreview = false;
-        OnPropertyChanged(nameof(ShowFallbackDownloadButton));
         PreviewTitle = null;
         PreviewAuthor = null;
         PreviewThumbnail = null;

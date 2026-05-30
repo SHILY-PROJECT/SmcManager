@@ -256,13 +256,6 @@
                     </Border>
                 </VerticalStackLayout>
 
-                <Button Style="{StaticResource DownloadIconButtonStyle}"
-                        HorizontalOptions="End"
-                        ImageSource="{DynamicResource DownloadButtonIcon}"
-                        IsVisible="{Binding ShowFallbackDownloadButton}"
-                        Command="{Binding DownloadCommand}"
-                        SemanticProperties.Description="Скачать" />
-
                 <Label Text="Скачивания"
                        Style="{StaticResource SectionSubtitleStyle}"
                        IsVisible="{Binding HasActiveDownloads}" />
