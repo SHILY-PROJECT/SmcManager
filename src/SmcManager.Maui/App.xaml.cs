@@ -43,6 +43,7 @@ public partial class App : Application
 
                 var share = _services.GetRequiredService<ShareLinkService>();
                 await share.EnsureDownloadTabAsync().ConfigureAwait(false);
+                await share.DeliverPendingShareAsync().ConfigureAwait(false);
             }
             catch
             {

@@ -20,6 +20,7 @@ namespace SmcManager.Maui;
 public class MainActivity : MauiAppCompatActivity
 {
     private string? _deferredShareText;
+    private bool _isResumed;
 
     protected override void OnCreate(Bundle? savedInstanceState)
     {
@@ -47,7 +48,14 @@ public class MainActivity : MauiAppCompatActivity
     protected override void OnResume()
     {
         base.OnResume();
+        _isResumed = true;
         ProcessDeferredShareText();
+    }
+
+    protected override void OnPause()
+    {
+        _isResumed = false;
+        base.OnPause();
     }
 
     private void HandleShareIntent(Intent? intent)
@@ -56,8 +64,10 @@ public class MainActivity : MauiAppCompatActivity
         if (string.IsNullOrWhiteSpace(sharedText))
             return;
 
-        if (!TryHandleShareText(sharedText))
-            _deferredShareText = sharedText;
+        _deferredShareText = sharedText;
+
+        if (_isResumed)
+            ProcessDeferredShareText();
     }
 
     private void ProcessDeferredShareText()
@@ -68,24 +78,17 @@ public class MainActivity : MauiAppCompatActivity
         var text = _deferredShareText;
         _deferredShareText = null;
 
-        if (!TryHandleShareText(text))
-            _deferredShareText = text;
-    }
+        if (!ShareLinkService.TryExtractNormalizedUrl(text, out var normalized))
+            return;
 
-    private bool TryHandleShareText(string sharedText)
-    {
         var shareService = ResolveShareService();
         if (shareService is null)
         {
-            if (!ShareLinkService.TryNormalizeIncomingUrl(sharedText, out var normalized))
-                return false;
-
             Preferences.Default.Set(MauiSettingsService.PendingShareUrlPreferenceKey, normalized);
-            return true;
+            return;
         }
 
-        _ = shareService.HandleIncomingUrlAsync(sharedText);
-        return true;
+        _ = shareService.HandleIncomingUrlAsync(text);
     }
 
     private static ShareLinkService? ResolveShareService() =>

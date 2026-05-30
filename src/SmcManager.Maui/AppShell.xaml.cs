@@ -12,12 +12,14 @@ namespace SmcManager.Maui;
 public partial class AppShell : Shell, IRecipient<ThemeChangedMessage>
 {
     private readonly ThemeService _themeService;
+    private readonly ShareLinkService _shareLinkService;
 
     public ObservableCollection<FlyoutMenuItem> FlyoutMenuItems { get; } = [];
 
-    public AppShell(ThemeService themeService)
+    public AppShell(ThemeService themeService, ShareLinkService shareLinkService)
     {
         _themeService = themeService;
+        _shareLinkService = shareLinkService;
         InitializeComponent();
         InitializeFlyoutMenu();
         ShellNavigationHistory.ResetToRoute("download");
@@ -38,7 +40,14 @@ public partial class AppShell : Shell, IRecipient<ThemeChangedMessage>
     {
         AppNavigationState.Update(this);
         PageSafeAreaHelper.EnsureApplied(CurrentPage);
+
+        if (IsDownloadRoute(e.Current?.Location?.OriginalString))
+            _ = _shareLinkService.DeliverPendingShareAsync();
     }
+
+    private static bool IsDownloadRoute(string? location) =>
+        !string.IsNullOrWhiteSpace(location)
+        && location.Contains("download", StringComparison.OrdinalIgnoreCase);
 
     protected override bool OnBackButtonPressed()
     {

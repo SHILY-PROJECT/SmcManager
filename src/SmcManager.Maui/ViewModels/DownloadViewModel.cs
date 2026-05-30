@@ -208,9 +208,11 @@ public partial class DownloadViewModel : ObservableObject,
         _ = _linkMetadata.WarmupAsync();
         await LoadTagsAsync();
         await RefreshRecentAsync();
+
+        var hadPendingShare = !string.IsNullOrWhiteSpace(await _settings.GetPendingShareUrlAsync());
         await ApplyPendingShareUrlAsync();
 
-        if (_holdDownloadFormClear)
+        if (_holdDownloadFormClear && !hadPendingShare)
             await ClearDownloadInputAsync();
         else if (!string.IsNullOrWhiteSpace(Url))
             ScheduleUrlRefresh();
@@ -391,9 +393,15 @@ public partial class DownloadViewModel : ObservableObject,
     public void Receive(ShareUrlReceivedMessage message)
     {
         if (MainThread.IsMainThread)
-            SetUrl(CleanUrlForDisplay(message.Url));
+            _ = ApplySharedUrlAsync(message.Url);
         else
-            MainThread.BeginInvokeOnMainThread(() => SetUrl(CleanUrlForDisplay(message.Url)));
+            MainThread.BeginInvokeOnMainThread(() => _ = ApplySharedUrlAsync(message.Url));
+    }
+
+    private async Task ApplySharedUrlAsync(string url)
+    {
+        SetUrl(CleanUrlForDisplay(url));
+        await _settings.SetPendingShareUrlAsync(null);
     }
 
     public void Receive(TagsChangedMessage message) => _ = LoadTagsAsync();

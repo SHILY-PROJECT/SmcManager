@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using CommunityToolkit.Mvvm.Messaging;
 using SmcManager.Core.Services;
 using SmcManager.Core.Interfaces;
@@ -10,26 +11,60 @@ namespace SmcManager.Maui.Services;
 /// </summary>
 public class ShareLinkService
 {
+    private static readonly Regex HrefRegex = new(
+        @"href\s*=\s*[""']([^""']+)[""']",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
     private readonly ISettingsService _settings;
 
     public ShareLinkService(ISettingsService settings) => _settings = settings;
 
     /// <summary>Переход на вкладку «Скачать» (с ожиданием Shell при холодном старте).</summary>
-    public async Task EnsureDownloadTabAsync()
+    public Task EnsureDownloadTabAsync() => NavigateToDownloadTabAsync();
+
+    public async Task HandleIncomingUrlAsync(string? url)
     {
-        for (var attempt = 0; attempt < 40 && Shell.Current is null; attempt++)
-            await Task.Delay(50).ConfigureAwait(false);
+        if (!TryExtractNormalizedUrl(url, out var normalized))
+            return;
 
-        await MainThread.InvokeOnMainThreadAsync(async () =>
+        await _settings.SetPendingShareUrlAsync(normalized).ConfigureAwait(false);
+        await NavigateToDownloadTabAsync().ConfigureAwait(false);
+        await DeliverPendingShareAsync().ConfigureAwait(false);
+    }
+
+    /// <summary>Отправляет отложенную ссылку на экран «Скачать» (если есть).</summary>
+    public async Task DeliverPendingShareAsync()
+    {
+        var pending = await _settings.GetPendingShareUrlAsync().ConfigureAwait(false);
+        if (string.IsNullOrWhiteSpace(pending))
+            return;
+
+        for (var attempt = 0; attempt < 8; attempt++)
         {
-            if (Shell.Current is null)
+            await MainThread.InvokeOnMainThreadAsync(() =>
+                WeakReferenceMessenger.Default.Send(new ShareUrlReceivedMessage(pending)));
+
+            await Task.Delay(attempt == 0 ? 80 : 120).ConfigureAwait(false);
+
+            var remaining = await _settings.GetPendingShareUrlAsync().ConfigureAwait(false);
+            if (string.IsNullOrWhiteSpace(remaining))
                 return;
+        }
+    }
 
-            if (Shell.Current.FlyoutIsPresented)
-                Shell.Current.FlyoutIsPresented = false;
+    public static bool TryExtractNormalizedUrl(string? raw, out string normalized)
+    {
+        normalized = string.Empty;
+        if (string.IsNullOrWhiteSpace(raw))
+            return false;
 
-            await Shell.Current.GoToAsync("//download");
-        });
+        foreach (var candidate in EnumerateUrlCandidates(raw))
+        {
+            if (TryNormalizeIncomingUrl(candidate, out normalized))
+                return true;
+        }
+
+        return false;
     }
 
     public static bool TryNormalizeIncomingUrl(string? raw, out string normalized)
@@ -46,16 +81,46 @@ public class ShareLinkService
         return !string.IsNullOrWhiteSpace(normalized);
     }
 
-    public async Task HandleIncomingUrlAsync(string? url)
+    private static IEnumerable<string> EnumerateUrlCandidates(string raw)
     {
-        if (!TryNormalizeIncomingUrl(url, out var normalized))
-            return;
+        yield return raw;
 
-        await _settings.SetPendingShareUrlAsync(normalized).ConfigureAwait(false);
+        var extracted = ContentUrlNormalizer.ExtractHttpUrl(raw);
+        if (!string.Equals(extracted, raw, StringComparison.Ordinal))
+            yield return extracted;
 
-        await EnsureDownloadTabAsync().ConfigureAwait(false);
+        foreach (Match match in HrefRegex.Matches(raw))
+        {
+            var href = match.Groups[1].Value;
+            if (!string.IsNullOrWhiteSpace(href))
+                yield return href;
+        }
+    }
 
-        await MainThread.InvokeOnMainThreadAsync(() =>
-            WeakReferenceMessenger.Default.Send(new ShareUrlReceivedMessage(normalized)));
+    private async Task NavigateToDownloadTabAsync()
+    {
+        for (var attempt = 0; attempt < 40 && Shell.Current is null; attempt++)
+            await Task.Delay(50).ConfigureAwait(false);
+
+        await MainThread.InvokeOnMainThreadAsync(async () =>
+        {
+            if (Shell.Current is not Shell shell)
+                return;
+
+            shell.FlyoutIsPresented = false;
+
+            while (shell.Navigation.ModalStack.Count > 0)
+                await shell.Navigation.PopModalAsync(animated: false);
+
+            while (shell.Navigation.NavigationStack.Count > 1)
+                await shell.Navigation.PopAsync(animated: false);
+
+            var location = shell.CurrentState?.Location?.OriginalString ?? string.Empty;
+            if (!location.Contains("download", StringComparison.OrdinalIgnoreCase))
+            {
+                ShellNavigationHistory.RecordFlyoutNavigation("download");
+                await shell.GoToAsync("//download");
+            }
+        });
     }
 }
