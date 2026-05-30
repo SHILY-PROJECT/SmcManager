@@ -19,17 +19,20 @@ public partial class TagsViewModel : ObservableObject,
     private readonly TagCreationService _tagCreation;
     private readonly TagListService _tagList;
     private readonly BottomToastService _toast;
+    private readonly TagColorPickerService _colorPicker;
 
     public TagsViewModel(
         IContentRepository repository,
         TagCreationService tagCreation,
         TagListService tagList,
-        BottomToastService toast)
+        BottomToastService toast,
+        TagColorPickerService colorPicker)
     {
         _repository = repository;
         _tagCreation = tagCreation;
         _tagList = tagList;
         _toast = toast;
+        _colorPicker = colorPicker;
         WeakReferenceMessenger.Default.Register<TagSortChangedMessage>(this);
     }
 
@@ -63,6 +66,25 @@ public partial class TagsViewModel : ObservableObject,
 
         var combined = string.IsNullOrWhiteSpace(trimmed) ? $"{emoji} " : $"{emoji} {trimmed}";
         NewTagName = combined.Length <= 32 ? combined : NewTagName;
+    }
+
+    [RelayCommand]
+    private async Task PickNewTagColorAsync()
+    {
+        var color = await _colorPicker.PickColorAsync(SelectedColor);
+        if (color is not null)
+            SelectedColor = color;
+    }
+
+    [RelayCommand]
+    private async Task PickRowColorAsync(TagRowViewModel row)
+    {
+        if (!row.IsEditing)
+            return;
+
+        var color = await _colorPicker.PickColorAsync(row.EditColorHex);
+        if (color is not null)
+            row.EditColorHex = TagColorHelper.NormalizeHex(color);
     }
 
     [RelayCommand]
@@ -105,10 +127,10 @@ public partial class TagsViewModel : ObservableObject,
             return;
         }
 
-        row.CancelEdit();
-        await LoadAsync();
+        row.CommitSave(tag!);
         WeakReferenceMessenger.Default.Send(new TagsChangedMessage());
         StatusMessage = $"Тег «{tag!.Name}» сохранён.";
+        await LoadAsync();
     }
 
     [RelayCommand]

@@ -1,5 +1,7 @@
-using Microsoft.Extensions.DependencyInjection;
+using System.Windows.Input;
+using SmcManager.Maui.Models;
 using SmcManager.Maui.Services;
+using SmcManager.Maui.ViewModels;
 
 namespace SmcManager.Maui.Views.Controls;
 
@@ -17,6 +19,18 @@ public partial class TagColorPickerView : ContentView
             BindingMode.TwoWay,
             propertyChanged: OnSelectedColorChanged);
 
+    public static readonly BindableProperty PickColorCommandProperty =
+        BindableProperty.Create(
+            nameof(PickColorCommand),
+            typeof(ICommand),
+            typeof(TagColorPickerView));
+
+    public static readonly BindableProperty CommandParameterProperty =
+        BindableProperty.Create(
+            nameof(CommandParameter),
+            typeof(object),
+            typeof(TagColorPickerView));
+
     public TagColorPickerView()
     {
         InitializeComponent();
@@ -29,6 +43,18 @@ public partial class TagColorPickerView : ContentView
         set => SetValue(SelectedColorProperty, value);
     }
 
+    public ICommand? PickColorCommand
+    {
+        get => (ICommand?)GetValue(PickColorCommandProperty);
+        set => SetValue(PickColorCommandProperty, value);
+    }
+
+    public object? CommandParameter
+    {
+        get => GetValue(CommandParameterProperty);
+        set => SetValue(CommandParameterProperty, value);
+    }
+
     private static void OnSelectedColorChanged(BindableObject bindable, object oldValue, object newValue)
     {
         if (bindable is TagColorPickerView view && newValue is string hex)
@@ -37,13 +63,21 @@ public partial class TagColorPickerView : ContentView
 
     private async void OnOpenPicker(object? sender, EventArgs e)
     {
+        var parameter = CommandParameter ?? BindingContext;
+        if (PickColorCommand?.CanExecute(parameter) == true)
+        {
+            PickColorCommand.Execute(parameter);
+            return;
+        }
+
         var services = Application.Current?.Handler?.MauiContext?.Services;
         var picker = services?.GetService<TagColorPickerService>();
-        if (picker is null) return;
+        if (picker is null)
+            return;
 
         var result = await picker.PickColorAsync(SelectedColor);
         if (result is not null)
-            SelectedColor = result;
+            SelectedColor = TagColorHelper.NormalizeHex(result);
     }
 
     private void ApplyColor(string hex)

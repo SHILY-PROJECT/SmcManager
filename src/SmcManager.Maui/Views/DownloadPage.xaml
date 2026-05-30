@@ -345,6 +345,7 @@
                     <CollectionView.ItemTemplate>
                         <DataTemplate x:DataType="vm:ContentItemDisplayModel">
                             <controls:ContentCardView Item="{Binding .}"
+                                                      OpenCommand="{Binding Source={RelativeSource AncestorType={x:Type vm:DownloadViewModel}}, Path=OpenRecentContentCommand}"
                                                       DeleteCommand="{Binding Source={RelativeSource AncestorType={x:Type vm:DownloadViewModel}}, Path=DeleteRecentItemCommand}" />
                         </DataTemplate>
                     </CollectionView.ItemTemplate>

@@ -72,6 +72,12 @@ public partial class LibraryViewModel : ObservableObject,
         WeakReferenceMessenger.Default.Send(new ContentDeletedMessage());
     }
 
+    [RelayCommand]
+    private Task OpenContentAsync(ContentItemDisplayModel? item) =>
+        item is null
+            ? Task.CompletedTask
+            : ContentNavigationHelper.OpenDetailAsync(item.Id);
+
     public void Receive(ContentDeletedMessage message) => _ = RefreshAsync();
 
     public void Receive(TagSortChangedMessage message) => _ = RefreshAsync();

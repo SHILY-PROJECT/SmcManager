@@ -27,7 +27,7 @@ public sealed class TagCreationService(IContentRepository repository)
         var tag = await repository.SaveTagAsync(new ContentTag
         {
             Name = trimmed,
-            ColorHex = colorHex
+            ColorHex = TagColorHelper.NormalizeHex(colorHex)
         }, cancellationToken);
 
         return (true, tag, null);
@@ -56,7 +56,7 @@ public sealed class TagCreationService(IContentRepository repository)
             return (false, null, "Тег с таким именем уже есть.");
 
         tag.Name = trimmed;
-        tag.ColorHex = colorHex;
+        tag.ColorHex = TagColorHelper.NormalizeHex(colorHex);
         var saved = await repository.SaveTagAsync(tag, cancellationToken);
         return (true, saved, null);
     }

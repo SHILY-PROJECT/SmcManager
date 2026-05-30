@@ -12,6 +12,7 @@ public partial class ContentDetailPage : ContentPage, IRecipient<ThemeChangedMes
 {
     private bool _carouselHandlersAttached;
     private bool _isUpdatingCarousel;
+    private bool _isInitializingCarousel;
     private ContentDetailViewModel? _viewModel;
 
     public ContentDetailPage(ContentDetailViewModel viewModel)
@@ -42,34 +43,16 @@ public partial class ContentDetailPage : ContentPage, IRecipient<ThemeChangedMes
 
     private async Task LoadPageContentAsync(ContentDetailViewModel vm)
     {
-        void OnSlidesReady(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
-        {
-            if (e.PropertyName != nameof(ContentDetailViewModel.HasMediaSlides)
-                || !vm.HasMediaSlides
-                || vm.MediaSlides.Count == 0)
-                return;
-
-            vm.PropertyChanged -= OnSlidesReady;
-            _ = InitializeCarouselWhenReadyAsync(vm);
-        }
-
-        vm.PropertyChanged += OnSlidesReady;
-        try
-        {
-            await vm.LoadForDisplayAsync();
-            await InitializeCarouselWhenReadyAsync(vm);
-        }
-        finally
-        {
-            vm.PropertyChanged -= OnSlidesReady;
-        }
+        await vm.LoadForDisplayAsync();
+        await InitializeCarouselWhenReadyAsync(vm);
     }
 
     private async Task InitializeCarouselWhenReadyAsync(ContentDetailViewModel vm)
     {
-        if (vm.MediaSlides.Count == 0)
+        if (vm.MediaSlides.Count == 0 || _isInitializingCarousel)
             return;
 
+        _isInitializingCarousel = true;
         try
         {
             await InitializeCarouselAsync(vm);
@@ -77,6 +60,10 @@ public partial class ContentDetailPage : ContentPage, IRecipient<ThemeChangedMes
         catch
         {
             // carousel init is best-effort; avoid crash on freshly downloaded media
+        }
+        finally
+        {
+            _isInitializingCarousel = false;
         }
     }
 
@@ -94,6 +81,7 @@ public partial class ContentDetailPage : ContentPage, IRecipient<ThemeChangedMes
             _viewModel = null;
         }
 
+        _isInitializingCarousel = false;
         WeakReferenceMessenger.Default.Unregister<ThemeChangedMessage>(this);
         DetachCarouselHandlers();
         base.OnDisappearing();

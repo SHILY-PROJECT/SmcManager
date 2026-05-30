@@ -20,6 +20,7 @@ namespace SmcManager.Maui;
 public class MainActivity : MauiAppCompatActivity
 {
     private string? _deferredShareText;
+    private static string? _lastHandledShareUrl;
     private bool _isResumed;
 
     protected override void OnCreate(Bundle? savedInstanceState)
@@ -79,7 +80,18 @@ public class MainActivity : MauiAppCompatActivity
         _deferredShareText = null;
 
         if (!ShareLinkService.TryExtractNormalizedUrl(text, out var normalized))
+        {
+            ClearShareIntent();
             return;
+        }
+
+        if (string.Equals(_lastHandledShareUrl, normalized, StringComparison.OrdinalIgnoreCase))
+        {
+            ClearShareIntent();
+            return;
+        }
+
+        _lastHandledShareUrl = normalized;
 
         var shareService = ResolveShareService();
         if (shareService is null)

@@ -261,8 +261,9 @@ public class ContentRepository : IContentRepository
         {
             if (existingByName.TryGetValue(definition.Name, out var existing))
             {
-                existing.ColorHex = definition.ColorHex;
-                existing.SortOrder = definition.SortOrder;
+                if (existing.SortOrder != definition.SortOrder)
+                    existing.SortOrder = definition.SortOrder;
+
                 continue;
             }
 
@@ -470,7 +471,17 @@ public class ContentRepository : IContentRepository
             _db.Tags.Add(tag);
         }
         else
-            _db.Tags.Update(tag);
+        {
+            var existing = await _db.Tags.FindAsync([tag.Id], cancellationToken);
+            if (existing is null)
+                return tag;
+
+            existing.Name = tag.Name;
+            existing.ColorHex = tag.ColorHex;
+            existing.SortOrder = tag.SortOrder;
+            await _db.SaveChangesAsync(cancellationToken);
+            return existing;
+        }
 
         await _db.SaveChangesAsync(cancellationToken);
         return tag;

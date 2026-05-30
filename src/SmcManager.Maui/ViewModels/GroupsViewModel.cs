@@ -78,6 +78,12 @@ public partial class GroupsViewModel : ObservableObject,
         WeakReferenceMessenger.Default.Send(new ContentDeletedMessage());
     }
 
+    [RelayCommand]
+    private Task OpenContentAsync(ContentItemDisplayModel? item) =>
+        item is null
+            ? Task.CompletedTask
+            : ContentNavigationHelper.OpenDetailAsync(item.Id);
+
     private async Task LoadTagsAsync()
     {
         var tags = await _tagList.GetSortedTagsAsync();

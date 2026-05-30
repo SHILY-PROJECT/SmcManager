@@ -9,6 +9,14 @@ public static class TagColorHelper
 
     public static string DefaultHex => TagColorPresets.Default;
 
+    public static string NormalizeHex(string? hex)
+    {
+        if (TryParseHex(hex, out var color))
+            return ToHex(color);
+
+        return DefaultHex;
+    }
+
     public static string ToHex(Color color)
     {
         var r = (int)Math.Round(color.Red * 255);

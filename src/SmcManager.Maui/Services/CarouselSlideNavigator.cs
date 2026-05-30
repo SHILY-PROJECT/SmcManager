@@ -11,6 +11,12 @@ internal static class CarouselSlideNavigator
             return;
 
         index = Math.Clamp(index, 0, itemCount - 1);
+
+#if ANDROID
+        if (carousel.Position != index)
+            carousel.Position = index;
+#else
         carousel.ScrollTo(index, -1, ScrollToPosition.Center, animate: false);
+#endif
     }
 }

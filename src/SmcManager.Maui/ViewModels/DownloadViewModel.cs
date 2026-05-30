@@ -17,7 +17,6 @@ namespace SmcManager.Maui.ViewModels;
 /// Вкладка «Скачать»: ввод ссылки, выбор тега, аккаунта и список последних скачиваний.
 /// </summary>
 public partial class DownloadViewModel : ObservableObject,
-    IRecipient<ShareUrlReceivedMessage>,
     IRecipient<TagsChangedMessage>,
     IRecipient<TagSortChangedMessage>,
     IRecipient<ContentDeletedMessage>
@@ -47,6 +46,7 @@ public partial class DownloadViewModel : ObservableObject,
     private SocialPlatform? _previewPlatform;
     private string? _lastShareUrlApplied;
     private long _lastShareAppliedTick;
+    private bool _messagingActive;
 
     public DownloadViewModel(
         IDownloadOrchestrator orchestrator,
@@ -72,10 +72,37 @@ public partial class DownloadViewModel : ObservableObject,
         _toast = toast;
         _remoteImageCache = remoteImageCache;
         _logger = logger;
-        WeakReferenceMessenger.Default.Register<ShareUrlReceivedMessage>(this);
+    }
+
+    public void ActivateMessaging()
+    {
+        if (_messagingActive)
+            return;
+
+        _messagingActive = true;
         WeakReferenceMessenger.Default.Register<TagsChangedMessage>(this);
         WeakReferenceMessenger.Default.Register<TagSortChangedMessage>(this);
         WeakReferenceMessenger.Default.Register<ContentDeletedMessage>(this);
+    }
+
+    public void DeactivateMessaging()
+    {
+        if (!_messagingActive)
+            return;
+
+        _messagingActive = false;
+        WeakReferenceMessenger.Default.Unregister<TagsChangedMessage>(this);
+        WeakReferenceMessenger.Default.Unregister<TagSortChangedMessage>(this);
+        WeakReferenceMessenger.Default.Unregister<ContentDeletedMessage>(this);
+    }
+
+    public async Task ApplyIncomingShareUrlAsync(string url)
+    {
+        if (!TryBeginShareUrlApply(url))
+            return;
+
+        await MainThread.InvokeOnMainThreadAsync(() => ApplySharedUrl(url));
+        await _settings.SetPendingShareUrlAsync(null);
     }
 
     public bool HasUrl => !string.IsNullOrWhiteSpace(Url);
@@ -391,17 +418,6 @@ public partial class DownloadViewModel : ObservableObject,
         SetUrl(CleanUrlForDisplay(text));
     }
 
-    public void Receive(ShareUrlReceivedMessage message)
-    {
-        if (!TryBeginShareUrlApply(message.Url))
-            return;
-
-        if (MainThread.IsMainThread)
-            ApplySharedUrl(message.Url);
-        else
-            MainThread.BeginInvokeOnMainThread(() => ApplySharedUrl(message.Url));
-    }
-
     private void ApplySharedUrl(string url) => SetUrl(CleanUrlForDisplay(url));
 
     private bool TryBeginShareUrlApply(string url)
@@ -454,6 +470,12 @@ public partial class DownloadViewModel : ObservableObject,
         OnPropertyChanged(nameof(HasNoRecentDownloads));
         OnPropertyChanged(nameof(RecentDownloadsHeader));
     }
+
+    [RelayCommand]
+    private Task OpenRecentContentAsync(ContentItemDisplayModel? item) =>
+        item is null
+            ? Task.CompletedTask
+            : ContentNavigationHelper.OpenDetailAsync(item.Id);
 
     private void ScheduleUrlRefresh(bool forceImmediateLoading = false)
     {

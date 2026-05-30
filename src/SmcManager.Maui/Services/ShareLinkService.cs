@@ -1,8 +1,6 @@
 using System.Text.RegularExpressions;
-using CommunityToolkit.Mvvm.Messaging;
 using SmcManager.Core.Services;
 using SmcManager.Core.Interfaces;
-using SmcManager.Maui.Messages;
 using SmcManager.Maui.ViewModels;
 
 namespace SmcManager.Maui.Services;
@@ -18,6 +16,8 @@ public class ShareLinkService
 
     private static readonly SemaphoreSlim DeliverGate = new(1, 1);
     private static string? _inFlightShareUrl;
+    private static string? _lastIncomingShareUrl;
+    private static long _lastIncomingShareAt;
 
     private readonly ISettingsService _settings;
 
@@ -30,6 +30,13 @@ public class ShareLinkService
     {
         if (!TryExtractNormalizedUrl(url, out var normalized))
             return;
+
+        if (string.Equals(_lastIncomingShareUrl, normalized, StringComparison.OrdinalIgnoreCase)
+            && Environment.TickCount64 - _lastIncomingShareAt < 15_000)
+            return;
+
+        _lastIncomingShareUrl = normalized;
+        _lastIncomingShareAt = Environment.TickCount64;
 
         await _settings.SetPendingShareUrlAsync(normalized).ConfigureAwait(false);
         await NavigateToDownloadTabAsync().ConfigureAwait(false);
@@ -51,20 +58,18 @@ public class ShareLinkService
 
             for (var attempt = 0; attempt < 40; attempt++)
             {
-                if (Shell.Current?.CurrentPage?.BindingContext is DownloadViewModel)
+                if (Shell.Current?.CurrentPage?.BindingContext is DownloadViewModel vm)
                 {
                     _inFlightShareUrl = pending;
-                    await _settings.SetPendingShareUrlAsync(null).ConfigureAwait(false);
-
-                    await MainThread.InvokeOnMainThreadAsync(() =>
-                        WeakReferenceMessenger.Default.Send(new ShareUrlReceivedMessage(pending)));
-
+                    await vm.ApplyIncomingShareUrlAsync(pending).ConfigureAwait(false);
                     _ = ClearInFlightShareLaterAsync(pending);
                     return;
                 }
 
                 await Task.Delay(50).ConfigureAwait(false);
             }
+
+            await _settings.SetPendingShareUrlAsync(pending).ConfigureAwait(false);
         }
         finally
         {
@@ -134,6 +139,10 @@ public class ShareLinkService
             if (Shell.Current is not Shell shell)
                 return;
 
+            var location = shell.CurrentState?.Location?.OriginalString ?? string.Empty;
+            if (location.Contains("ContentDetailPage", StringComparison.OrdinalIgnoreCase))
+                return;
+
             shell.FlyoutIsPresented = false;
 
             while (shell.Navigation.ModalStack.Count > 0)
@@ -142,7 +151,6 @@ public class ShareLinkService
             while (shell.Navigation.NavigationStack.Count > 1)
                 await shell.Navigation.PopAsync(animated: false);
 
-            var location = shell.CurrentState?.Location?.OriginalString ?? string.Empty;
             if (!location.Contains("download", StringComparison.OrdinalIgnoreCase))
             {
                 ShellNavigationHistory.RecordFlyoutNavigation("download");

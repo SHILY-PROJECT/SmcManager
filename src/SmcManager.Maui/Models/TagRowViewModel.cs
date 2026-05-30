@@ -23,7 +23,7 @@ public partial class TagRowViewModel : ObservableObject
         };
     }
 
-    public ContentTag Tag { get; }
+    public ContentTag Tag { get; private set; }
 
     public string Name => Tag.Name;
 
@@ -54,5 +54,15 @@ public partial class TagRowViewModel : ObservableObject
         EditName = Tag.Name;
         EditColorHex = Tag.ColorHex;
         IsEditing = false;
+    }
+
+    public void CommitSave(ContentTag saved)
+    {
+        Tag = saved;
+        EditName = saved.Name;
+        EditColorHex = saved.ColorHex;
+        IsEditing = false;
+        OnPropertyChanged(nameof(Name));
+        OnPropertyChanged(nameof(ColorHex));
     }
 }

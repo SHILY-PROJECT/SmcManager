@@ -51,6 +51,7 @@
             <CollectionView.ItemTemplate>
                 <DataTemplate x:DataType="vm:ContentItemDisplayModel">
                     <controls:ContentCardView Item="{Binding .}"
+                                              OpenCommand="{Binding Source={RelativeSource AncestorType={x:Type vm:GroupsViewModel}}, Path=OpenContentCommand}"
                                               DeleteCommand="{Binding Source={RelativeSource AncestorType={x:Type vm:GroupsViewModel}}, Path=DeleteItemCommand}" />
                 </DataTemplate>
             </CollectionView.ItemTemplate>

@@ -1,4 +1,5 @@
 using SmcManager.Core.Interfaces;
+using SmcManager.Core.Services;
 
 namespace SmcManager.Maui.Services;
 
@@ -7,11 +8,33 @@ namespace SmcManager.Maui.Services;
 /// </summary>
 public class LinkLauncherService : ILinkLauncherService
 {
-    public async Task OpenSourceAsync(string url)
+    public Task OpenSourceAsync(string url)
     {
-        if (string.IsNullOrWhiteSpace(url)) return;
-        if (!Uri.TryCreate(url.Trim(), UriKind.Absolute, out var uri)) return;
+        if (string.IsNullOrWhiteSpace(url))
+            return Task.CompletedTask;
 
-        await Browser.Default.OpenAsync(uri, BrowserLaunchMode.External);
+        var prepared = ContentUrlNormalizer.PrepareForDetection(url.Trim());
+        var normalized = ContentUrlNormalizer.Normalize(prepared);
+        if (!Uri.TryCreate(normalized, UriKind.Absolute, out var uri))
+            return Task.CompletedTask;
+
+        return MainThread.InvokeOnMainThreadAsync(async () =>
+        {
+            try
+            {
+                await Browser.Default.OpenAsync(uri, BrowserLaunchMode.SystemPreferred);
+            }
+            catch
+            {
+                try
+                {
+                    await Launcher.Default.OpenAsync(uri);
+                }
+                catch
+                {
+                    // ignore: no browser / activity unavailable
+                }
+            }
+        });
     }
 }

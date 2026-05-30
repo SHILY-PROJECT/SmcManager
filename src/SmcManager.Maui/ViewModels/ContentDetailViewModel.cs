@@ -19,7 +19,7 @@ namespace SmcManager.Maui.ViewModels;
 /// Просмотр скачанного поста: медиа, описание, открытие в проводнике.
 /// </summary>
 [QueryProperty(nameof(ContentId), "contentId")]
-public partial class ContentDetailViewModel : ObservableObject, IQueryAttributable, IRecipient<TagsChangedMessage>, IRecipient<TagSortChangedMessage>
+public partial class ContentDetailViewModel : ObservableObject, IRecipient<TagsChangedMessage>, IRecipient<TagSortChangedMessage>
 {
     private readonly IContentRepository _repository;
     private int _loadedContentId;
@@ -61,23 +61,20 @@ public partial class ContentDetailViewModel : ObservableObject, IQueryAttributab
 
     public void Receive(TagSortChangedMessage message) => _ = LoadTagEditorAsync();
 
-    public string ContentId { get; set; } = string.Empty;
+    [ObservableProperty]
+    private string _contentId = string.Empty;
 
-    public void ApplyQueryAttributes(IDictionary<string, object> query)
+    partial void OnContentIdChanged(string value)
     {
-        if (!query.TryGetValue("contentId", out var value))
+        if (!int.TryParse(value, out var id) || id <= 0)
             return;
 
-        var newId = value?.ToString() ?? string.Empty;
-        if (string.Equals(ContentId, newId, StringComparison.Ordinal))
-            return;
-
-        ContentId = newId;
         _enteredAtUtc = DateTime.UtcNow;
-        _loadedContentId = 0;
+        if (_loadedContentId == id && IsContentLoaded)
+            return;
 
-        if (int.TryParse(ContentId, out _))
-            _ = LoadAsync();
+        _loadedContentId = 0;
+        _ = LoadAsync();
     }
 
     public ObservableCollection<MediaSlideViewModel> MediaSlides { get; } = [];
@@ -447,14 +444,20 @@ public partial class ContentDetailViewModel : ObservableObject, IQueryAttributab
     [RelayCommand]
     private async Task OpenSourceAsync()
     {
-        if (_content is null || string.IsNullOrWhiteSpace(_content.SourceUrl)) return;
+        if (_content is null || string.IsNullOrWhiteSpace(_content.SourceUrl))
+            return;
 
-        // Android: предотвращаем "прокликивание" — первый тап по карточке может
-        // попасть в кнопку на новом экране в момент навигации.
         if (_enteredAtUtc != default && (DateTime.UtcNow - _enteredAtUtc) < TimeSpan.FromMilliseconds(650))
             return;
 
-        await _linkLauncher.OpenSourceAsync(_content.SourceUrl);
+        try
+        {
+            await _linkLauncher.OpenSourceAsync(_content.SourceUrl);
+        }
+        catch
+        {
+            // Browser/Launcher failures must not crash the app.
+        }
     }
 
     [RelayCommand]
@@ -531,21 +534,6 @@ public partial class ContentDetailViewModel : ObservableObject, IQueryAttributab
             if (item is null || version != _loadVersion)
                 return;
 
-            var firstMediaPath = item.MediaFiles
-                .OrderBy(m => m.OrderIndex)
-                .Select(m => m.LocalPath)
-                .FirstOrDefault(path => !string.IsNullOrWhiteSpace(path));
-
-            if (!string.IsNullOrWhiteSpace(firstMediaPath))
-            {
-                await MediaFileReadiness.WaitForFilesAsync(
-                    [firstMediaPath],
-                    maxTotalMilliseconds: 200).ConfigureAwait(false);
-            }
-
-            if (version != _loadVersion)
-                return;
-
             var appSettings = await _settings.GetAppSettingsAsync().ConfigureAwait(false);
             if (version != _loadVersion)
                 return;
@@ -563,36 +551,11 @@ public partial class ContentDetailViewModel : ObservableObject, IQueryAttributab
                 return;
 
             _ = LoadTagEditorAsync();
-
-            if (MediaSlides.Count == 0 && item.MediaFiles.Count > 0 && version == _loadVersion)
-                _ = RetryLoadMediaWhenReadyAsync(item, id, version);
         }
         finally
         {
             _loadGate.Release();
         }
-    }
-
-    private async Task RetryLoadMediaWhenReadyAsync(ContentItem item, int id, int version)
-    {
-        await MediaFileReadiness.WaitForFilesAsync(
-            item.MediaFiles.OrderBy(m => m.OrderIndex).Select(m => m.LocalPath),
-            maxTotalMilliseconds: 1200).ConfigureAwait(false);
-
-        if (version != _loadVersion || _loadedContentId != id)
-            return;
-
-        var appSettings = await _settings.GetAppSettingsAsync().ConfigureAwait(false);
-        if (version != _loadVersion)
-            return;
-
-        await MainThread.InvokeOnMainThreadAsync(() =>
-        {
-            if (version != _loadVersion || _loadedContentId != id)
-                return;
-
-            ApplyLoadedContent(item, id, appSettings);
-        });
     }
 
     private void ApplyLoadedContent(ContentItem item, int id, AppUserSettings appSettings)

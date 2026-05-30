@@ -1,7 +1,6 @@
 using System.Windows.Input;
 using SmcManager.Maui.Services;
 using SmcManager.Maui.ViewModels;
-using SmcManager.Maui.Views;
 
 namespace SmcManager.Maui.Views.Controls;
 
@@ -17,6 +16,9 @@ public partial class ContentCardView : ContentView
     public static readonly BindableProperty DeleteCommandProperty = BindableProperty.Create(
         nameof(DeleteCommand), typeof(ICommand), typeof(ContentCardView));
 
+    public static readonly BindableProperty OpenCommandProperty = BindableProperty.Create(
+        nameof(OpenCommand), typeof(ICommand), typeof(ContentCardView));
+
     public ContentItemDisplayModel? Item
     {
         get => (ContentItemDisplayModel?)GetValue(ItemProperty);
@@ -27,6 +29,12 @@ public partial class ContentCardView : ContentView
     {
         get => (ICommand?)GetValue(DeleteCommandProperty);
         set => SetValue(DeleteCommandProperty, value);
+    }
+
+    public ICommand? OpenCommand
+    {
+        get => (ICommand?)GetValue(OpenCommandProperty);
+        set => SetValue(OpenCommandProperty, value);
     }
 
     public ImageSource? ThumbnailSource { get; private set; }
@@ -77,14 +85,19 @@ public partial class ContentCardView : ContentView
 
     private async void OnCardTapped(object? sender, TappedEventArgs e)
     {
-        if (Item is null || _isNavigating || Shell.Current is null)
+        if (Item is null || _isNavigating)
             return;
+
+        if (OpenCommand?.CanExecute(Item) == true)
+        {
+            OpenCommand.Execute(Item);
+            return;
+        }
 
         _isNavigating = true;
         try
         {
-            var route = $"{nameof(ContentDetailPage)}?contentId={Uri.EscapeDataString(Item.Id.ToString())}";
-            await Shell.Current.GoToAsync(route);
+            await ContentNavigationHelper.OpenDetailAsync(Item.Id);
         }
         finally
         {

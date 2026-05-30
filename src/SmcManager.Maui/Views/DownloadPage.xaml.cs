@@ -22,12 +22,19 @@ public partial class DownloadPage : ContentPage, IRecipient<ThemeChangedMessage>
     {
         base.OnAppearing();
         ApplyThemedIcons();
-        if (BindingContext is DownloadViewModel vm && vm.AppearingCommand.CanExecute(null))
-            vm.AppearingCommand.Execute(null);
+        if (BindingContext is DownloadViewModel vm)
+        {
+            vm.ActivateMessaging();
+            if (vm.AppearingCommand.CanExecute(null))
+                vm.AppearingCommand.Execute(null);
+        }
     }
 
     protected override void OnDisappearing()
     {
+        if (BindingContext is DownloadViewModel vm)
+            vm.DeactivateMessaging();
+
         WeakReferenceMessenger.Default.Unregister<ThemeChangedMessage>(this);
         base.OnDisappearing();
     }
