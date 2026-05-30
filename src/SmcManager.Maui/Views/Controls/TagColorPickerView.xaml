@@ -16,29 +16,11 @@
         <Border.GestureRecognizers>
             <TapGestureRecognizer Tapped="OnOpenPicker" />
         </Border.GestureRecognizers>
-        <Grid>
-            <Border x:Name="SelectedSwatchBorder"
-                    StrokeThickness="0">
-                <Border.StrokeShape>
-                    <RoundRectangle CornerRadius="12" />
-                </Border.StrokeShape>
-            </Border>
-            <Border BackgroundColor="#66000000"
-                    VerticalOptions="End"
-                    HorizontalOptions="End"
-                    WidthRequest="18"
-                    HeightRequest="18"
-                    Margin="0,0,2,2"
-                    StrokeThickness="0">
-                <Border.StrokeShape>
-                    <RoundRectangle CornerRadius="6" />
-                </Border.StrokeShape>
-                <Label Text="▾"
-                       FontSize="9"
-                       TextColor="White"
-                       HorizontalOptions="Center"
-                       VerticalOptions="Center" />
-            </Border>
-        </Grid>
+        <Border x:Name="SelectedSwatchBorder"
+                StrokeThickness="0">
+            <Border.StrokeShape>
+                <RoundRectangle CornerRadius="12" />
+            </Border.StrokeShape>
+        </Border>
     </Border>
 </ContentView>

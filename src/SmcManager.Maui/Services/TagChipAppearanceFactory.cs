@@ -16,12 +16,29 @@ public static class TagChipAppearanceFactory
             return FromTheme(isSelected);
 
         if (isSelected)
-            return new TagChipAppearance(accent, accent, Colors.White);
+            return new TagChipAppearance(accent, accent, ContrastTextFor(accent));
+
+        var (_, _, lightness) = TagColorHelper.ToHsl(accent);
+        if (lightness >= 82)
+        {
+            var stroke = Application.Current?.Resources.TryGetValue("Divider", out var divider) == true
+                && divider is Color dividerColor
+                ? dividerColor
+                : Colors.Gray;
+
+            return new TagChipAppearance(accent.WithAlpha(0.2f), stroke, Colors.Black);
+        }
 
         return new TagChipAppearance(
             accent.WithAlpha(0.18f),
             accent.WithAlpha(0.45f),
             accent);
+    }
+
+    private static Color ContrastTextFor(Color fill)
+    {
+        var (_, _, lightness) = TagColorHelper.ToHsl(fill);
+        return lightness >= 70 ? Colors.Black : Colors.White;
     }
 
     private static TagChipAppearance FromTheme(bool isSelected)

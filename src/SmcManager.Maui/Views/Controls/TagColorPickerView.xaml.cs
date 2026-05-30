@@ -1,4 +1,5 @@
 using System.Windows.Input;
+using CommunityToolkit.Mvvm.Input;
 using SmcManager.Maui.Models;
 using SmcManager.Maui.Services;
 using SmcManager.Maui.ViewModels;
@@ -64,9 +65,11 @@ public partial class TagColorPickerView : ContentView
     private async void OnOpenPicker(object? sender, EventArgs e)
     {
         var parameter = CommandParameter ?? BindingContext;
-        if (PickColorCommand?.CanExecute(parameter) == true)
+
+        if (PickColorCommand is not null && PickColorCommand.CanExecute(parameter))
         {
-            PickColorCommand.Execute(parameter);
+            await ExecutePickColorCommandAsync(PickColorCommand, parameter);
+            ApplyColor(SelectedColor);
             return;
         }
 
@@ -78,6 +81,22 @@ public partial class TagColorPickerView : ContentView
         var result = await picker.PickColorAsync(SelectedColor);
         if (result is not null)
             SelectedColor = TagColorHelper.NormalizeHex(result);
+    }
+
+    private static async Task ExecutePickColorCommandAsync(ICommand command, object? parameter)
+    {
+        switch (command)
+        {
+            case IAsyncRelayCommand<TagRowViewModel> rowCommand when parameter is TagRowViewModel row:
+                await rowCommand.ExecuteAsync(row);
+                break;
+            case IAsyncRelayCommand asyncCommand:
+                await asyncCommand.ExecuteAsync(parameter);
+                break;
+            default:
+                command.Execute(parameter);
+                break;
+        }
     }
 
     private void ApplyColor(string hex)

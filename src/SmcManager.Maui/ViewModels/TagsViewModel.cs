@@ -71,7 +71,9 @@ public partial class TagsViewModel : ObservableObject,
     [RelayCommand]
     private async Task PickNewTagColorAsync()
     {
-        var color = await _colorPicker.PickColorAsync(SelectedColor);
+        var color = await _colorPicker.PickColorAsync(
+            SelectedColor,
+            hex => SelectedColor = TagColorHelper.NormalizeHex(hex));
         if (color is null)
             return;
 
@@ -85,12 +87,14 @@ public partial class TagsViewModel : ObservableObject,
         if (!row.IsEditing)
             return;
 
-        var color = await _colorPicker.PickColorAsync(row.EditColorHex);
+        var color = await _colorPicker.PickColorAsync(
+            row.EditColorHex,
+            hex => row.EditColorHex = TagColorHelper.NormalizeHex(hex));
         if (color is null)
             return;
 
-        var normalized = TagColorHelper.NormalizeHex(color);
-        await MainThread.InvokeOnMainThreadAsync(() => row.EditColorHex = normalized);
+        await MainThread.InvokeOnMainThreadAsync(() =>
+            row.EditColorHex = TagColorHelper.NormalizeHex(color));
     }
 
     [RelayCommand]

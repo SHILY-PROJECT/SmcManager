@@ -50,8 +50,10 @@ public partial class TagColorPickerViewModel : ObservableObject
         var ctx = TagColorPickerNavigationContext.Current;
         if (ctx is null) return;
 
+        var hex = TagColorHelper.NormalizeHex(SelectedColor);
         ctx.IsFinished = true;
-        ctx.Completion.TrySetResult(SelectedColor);
+        ctx.OnColorSelected?.Invoke(hex);
+        ctx.Completion.TrySetResult(hex);
     }
 
     [RelayCommand]

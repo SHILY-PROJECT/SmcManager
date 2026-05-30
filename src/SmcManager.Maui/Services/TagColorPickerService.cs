@@ -7,7 +7,10 @@ namespace SmcManager.Maui.Services;
 /// </summary>
 public sealed class TagColorPickerService(IServiceProvider services)
 {
-    public async Task<string?> PickColorAsync(string initialColor, CancellationToken cancellationToken = default)
+    public async Task<string?> PickColorAsync(
+        string initialColor,
+        Action<string>? onColorSelected = null,
+        CancellationToken cancellationToken = default)
     {
         var navigation = Shell.Current?.Navigation ?? Application.Current?.MainPage?.Navigation;
         if (navigation is null)
@@ -17,7 +20,8 @@ public sealed class TagColorPickerService(IServiceProvider services)
         TagColorPickerNavigationContext.Current = new TagColorPickerNavigationContext
         {
             InitialColor = initialColor,
-            Completion = tcs
+            Completion = tcs,
+            OnColorSelected = onColorSelected
         };
 
         var page = services.GetRequiredService<Views.TagColorPickerPage>();

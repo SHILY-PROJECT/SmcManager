@@ -11,5 +11,8 @@ public sealed class TagColorPickerNavigationContext
 
     public required TaskCompletionSource<string?> Completion { get; init; }
 
+    /// <summary>Вызывается при «Готово» до закрытия модального окна (чтобы сразу обновить swatch).</summary>
+    public Action<string>? OnColorSelected { get; init; }
+
     public bool IsFinished { get; set; }
 }

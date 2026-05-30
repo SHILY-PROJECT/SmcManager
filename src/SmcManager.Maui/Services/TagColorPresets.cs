@@ -7,6 +7,7 @@ public static class TagColorPresets
 {
     public static IReadOnlyList<string> Colors { get; } =
     [
+        "#FFFFFF",
         "#4A8FE7",
         "#6BA3F0",
         "#3A7BD5",
@@ -19,5 +20,5 @@ public static class TagColorPresets
         "#607D8B"
     ];
 
-    public static string Default => Colors[0];
+    public static string Default => "#FFFFFF";
 }
