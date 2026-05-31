@@ -60,11 +60,9 @@ public partial class DownloadPage : ContentPage, IRecipient<ThemeChangedMessage>
 
     private void ApplyThemedIcons(ThemePalette? palette = null)
     {
-        palette ??= ThemePalette.For(
+        _ = palette ?? ThemePalette.For(
             Application.Current?.UserAppTheme == AppTheme.Dark
                 ? AppColorTheme.Dark
                 : AppColorTheme.Light);
-
-        ThemedIconHelper.SetImageSource(DismissPreviewButton, palette.DeleteIcon);
     }
 }

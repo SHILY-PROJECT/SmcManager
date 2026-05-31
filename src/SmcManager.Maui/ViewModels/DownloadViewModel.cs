@@ -35,16 +35,8 @@ public partial class DownloadViewModel : ObservableObject,
     private readonly ILogger<DownloadViewModel> _logger;
 
     private CancellationTokenSource? _urlRefreshCts;
-    private CancellationTokenSource? _metadataRefreshCts;
-    private CancellationTokenSource? _previewImageCts;
-    private bool _suppressAccountSelectionChange;
     private bool _suppressUrlNormalization;
     private bool _holdDownloadFormClear;
-    private string? _pendingDownloadUrl;
-    private IReadOnlyList<SocialAccount> _lastPlatformAccounts = [];
-    private SocialAccount? _lastDefaultAccount;
-    private AppUserSettings? _lastAppSettings;
-    private SocialPlatform? _previewPlatform;
     private string? _lastShareUrlApplied;
     private long _lastShareAppliedTick;
     private bool _messagingActive;
@@ -115,8 +107,13 @@ public partial class DownloadViewModel : ObservableObject,
 
     public bool HasUrl => !string.IsNullOrWhiteSpace(Url);
 
-    public bool ShowPreviewDownloadButton =>
-        ShowLinkPreview && !IsLoadingLinkMetadata;
+    public bool HasPendingLinkPreviews => PendingLinkPreviews.Count > 0;
+
+    public bool IsLoadingLinkMetadata => PendingLinkPreviews.Any(p => p.IsLoadingMetadata);
+
+    public bool ShowLinkMetadataReady => HasPendingLinkPreviews;
+
+    public bool ShowNewTagPanel => IsNewTagPanelVisible && !IsLoadingLinkMetadata;
 
     [ObservableProperty]
     private string _url = string.Empty;
@@ -130,12 +127,6 @@ public partial class DownloadViewModel : ObservableObject,
     [ObservableProperty]
     private int _recentCountLabel;
 
-    [ObservableProperty]
-    private bool _showAccountPicker;
-
-    [ObservableProperty]
-    private string _accountPickerHint = string.Empty;
-
     public string RecentDownloadsHeader => $"Последние скачивания";
 
     public string NewTagPanelToggleText => IsNewTagPanelVisible ? "Скрыть" : "+ Новый тег";
@@ -144,7 +135,7 @@ public partial class DownloadViewModel : ObservableObject,
 
     public ObservableCollection<ContentItemDisplayModel> RecentDownloads { get; } = [];
 
-    public ObservableCollection<AccountPickerOption> AccountOptions { get; } = [];
+    public ObservableCollection<LinkPreviewItemViewModel> PendingLinkPreviews { get; } = [];
 
     public bool HasNoRecentDownloads => RecentDownloads.Count == 0;
 
@@ -163,67 +154,6 @@ public partial class DownloadViewModel : ObservableObject,
 
     [ObservableProperty]
     private string? _newTagStatusMessage;
-
-    [ObservableProperty]
-    private AccountPickerOption? _selectedAccountOption;
-
-    [ObservableProperty]
-    private bool _showQualityPicker;
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsLoadingLinkMetadata))]
-    [NotifyPropertyChangedFor(nameof(ShowPreviewDownloadButton))]
-    [NotifyPropertyChangedFor(nameof(ShowLinkMetadataReady))]
-    private bool _isLoadingQualities;
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsLoadingLinkMetadata))]
-    [NotifyPropertyChangedFor(nameof(ShowPreviewDownloadButton))]
-    [NotifyPropertyChangedFor(nameof(ShowLinkMetadataReady))]
-    private bool _isLoadingPreview;
-
-    public bool IsLoadingLinkMetadata => IsLoadingPreview || IsLoadingQualities;
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ShowPreviewDownloadButton))]
-    [NotifyPropertyChangedFor(nameof(ShowLinkMetadataReady))]
-    [NotifyPropertyChangedFor(nameof(ShowPreviewAccountIndicators))]
-    private bool _showLinkPreview;
-
-    public bool ShowLinkMetadataReady => ShowLinkPreview && !IsLoadingLinkMetadata;
-
-    [ObservableProperty]
-    private string? _previewTitle;
-
-    [ObservableProperty]
-    private string? _previewAuthor;
-
-    [ObservableProperty]
-    private string? _previewThumbnail;
-
-    [ObservableProperty]
-    private string? _previewImageFile;
-
-    [ObservableProperty]
-    private string? _previewPlatformIconFile;
-
-    [ObservableProperty]
-    private string? _previewAuthStatusIconFile;
-
-    [ObservableProperty]
-    private bool _previewUsesAuthenticatedAccount;
-
-    [ObservableProperty]
-    private DownloadQualityOption? _selectedQuality;
-
-    public bool ShowPreviewAccountIndicators => ShowLinkPreview;
-
-    public string PreviewAuthStatusDescription =>
-        PreviewUsesAuthenticatedAccount
-            ? "Скачивание с авторизованным аккаунтом"
-            : "Скачивание без аккаунта";
-
-    public ObservableCollection<DownloadQualityOption> QualityOptions { get; } = [];
 
     public ObservableCollection<PendingDownloadViewModel> ActiveDownloads { get; } = [];
 
@@ -257,64 +187,39 @@ public partial class DownloadViewModel : ObservableObject,
             ScheduleUrlRefresh();
     }
 
-    partial void OnSelectedAccountOptionChanged(AccountPickerOption? value)
+    partial void OnIsNewTagPanelVisibleChanged(bool value)
     {
-        if (_suppressAccountSelectionChange || value is null) return;
-
-        AccountPickerHint = value.IsNoAccount
-            ? "Будет попытка скачать без входа. Для закрытого контента выберите аккаунт или добавьте его в настройках."
-            : "Скачивание с cookies выбранного аккаунта.";
-
-        if (value is { IsNoAccount: false, AccountId: int accountId, Platform: var platform })
-            _ = PersistAuthenticatedAccountChoiceAsync(platform.Value, accountId);
-
-        UpdatePreviewAccountIndicators();
-        ScheduleMetadataRefresh();
-    }
-
-    partial void OnShowLinkPreviewChanged(bool value)
-    {
-        UpdatePreviewAccountIndicators();
-        OnPropertyChanged(nameof(ShowPreviewAccountIndicators));
-        OnPropertyChanged(nameof(ShowPreviewDownloadButton));
-    }
-
-    partial void OnPreviewUsesAuthenticatedAccountChanged(bool value) =>
-        OnPropertyChanged(nameof(PreviewAuthStatusDescription));
-
-    partial void OnIsNewTagPanelVisibleChanged(bool value) =>
         OnPropertyChanged(nameof(NewTagPanelToggleText));
+        OnPropertyChanged(nameof(ShowNewTagPanel));
+    }
 
     [RelayCommand]
-    private async Task DownloadAsync()
+    private async Task DownloadPreviewAsync(LinkPreviewItemViewModel? preview)
     {
-        var activeUrl = ResolveActiveDownloadUrl();
-        if (string.IsNullOrWhiteSpace(activeUrl))
-        {
-            await _toast.ShowWarningAsync("Вставьте ссылку на пост, рилс или видео.");
+        if (preview is null)
             return;
-        }
 
-        if (!UrlPlatformDetector.TryDetect(activeUrl, out _, out _))
+        if (!UrlPlatformDetector.TryDetect(preview.Url, out _, out _))
         {
             await _toast.ShowWarningAsync("Ссылка не распознана. Поддерживаются Instagram, YouTube и ВКонтакте.");
             return;
         }
 
-        var normalizedUrl = ContentUrlNormalizer.Normalize(activeUrl);
+        var normalizedUrl = ContentUrlNormalizer.Normalize(preview.Url);
 
         if (!await DuplicateDownloadHelper.ConfirmReplaceIfExistsAsync(_repository, normalizedUrl))
             return;
 
-        var (useAccount, accountId) = ResolveDownloadAccountSelection();
+        var (useAccount, accountId) = ResolveDownloadAccountSelection(preview);
         var appSettings = await _settings.GetAppSettingsAsync().ConfigureAwait(false);
 
-        var job = new PendingDownloadViewModel(normalizedUrl, PreviewTitle, PreviewAuthor);
+        var job = new PendingDownloadViewModel(normalizedUrl, preview.PreviewTitle, preview.PreviewAuthor);
 
         await MainThread.InvokeOnMainThreadAsync(() =>
         {
             ActiveDownloads.Insert(0, job);
             OnPropertyChanged(nameof(HasActiveDownloads));
+            RemovePreviewItem(preview);
 
             if (accountId is int savedAccountId
                 && UrlPlatformDetector.TryDetect(normalizedUrl, out var detectedPlatform, out _))
@@ -323,11 +228,11 @@ public partial class DownloadViewModel : ObservableObject,
             }
 
             _holdDownloadFormClear = true;
-            ClearDownloadInputCore();
+            ClearUrlFieldOnly();
             StatusMessage = "Скачивание запущено. Можно добавить ещё ссылки.";
         });
 
-        _ = RunDownloadJobAsync(job, normalizedUrl, useAccount, accountId, appSettings);
+        _ = RunDownloadJobAsync(job, normalizedUrl, useAccount, accountId, appSettings, preview.SelectedQuality);
     }
 
     [RelayCommand]
@@ -338,13 +243,12 @@ public partial class DownloadViewModel : ObservableObject,
     }
 
     [RelayCommand]
-    private async Task DismissPreviewAsync()
+    private void DismissPreview(LinkPreviewItemViewModel? preview)
     {
-        _pendingDownloadUrl = null;
-        await MainThread.InvokeOnMainThreadAsync(() =>
-        {
-            ClearLinkMetadataUi();
-        });
+        if (preview is null)
+            return;
+
+        RemovePreviewItem(preview);
     }
 
     [RelayCommand]
@@ -438,19 +342,6 @@ public partial class DownloadViewModel : ObservableObject,
         _lastShareAppliedTick = 0;
     }
 
-    private void BeginLinkMetadataLoading()
-    {
-        MainThread.BeginInvokeOnMainThread(() =>
-        {
-            if (string.IsNullOrWhiteSpace(Url)
-                || !UrlPlatformDetector.TryDetect(Url, out _, out _))
-                return;
-
-            IsLoadingPreview = true;
-            IsLoadingQualities = true;
-        });
-    }
-
     public void Receive(TagsChangedMessage message)
     {
         _ = LoadTagsAsync();
@@ -490,349 +381,300 @@ public partial class DownloadViewModel : ObservableObject,
             ? Task.CompletedTask
             : ContentNavigationHelper.OpenDetailAsync(item.Id);
 
-    private void ScheduleUrlRefresh(bool forceImmediateLoading = false)
+    private void ScheduleUrlRefresh()
     {
-        _metadataRefreshCts?.Cancel();
-        _metadataRefreshCts?.Dispose();
-        _metadataRefreshCts = null;
-
         _urlRefreshCts?.Cancel();
         _urlRefreshCts?.Dispose();
         _urlRefreshCts = new CancellationTokenSource();
         var ct = _urlRefreshCts.Token;
-
-        if (forceImmediateLoading || !string.IsNullOrWhiteSpace(Url))
-            BeginLinkMetadataLoading();
-
         _ = RefreshAfterUrlChangeAsync(ct);
-    }
-
-    private void ScheduleMetadataRefresh()
-    {
-        _metadataRefreshCts?.Cancel();
-        _metadataRefreshCts?.Dispose();
-        _metadataRefreshCts = new CancellationTokenSource();
-        var ct = _metadataRefreshCts.Token;
-        _ = RefreshMetadataOnlyAsync(ct);
-    }
-
-    private async Task RefreshMetadataOnlyAsync(CancellationToken ct)
-    {
-        var owner = _metadataRefreshCts;
-        var activeUrl = ResolveActiveDownloadUrl();
-        if (string.IsNullOrWhiteSpace(activeUrl)
-            || !UrlPlatformDetector.TryDetect(activeUrl, out _, out _))
-        {
-            return;
-        }
-
-        try
-        {
-            await Task.Delay(350, ct).ConfigureAwait(false);
-            if (ct.IsCancellationRequested) return;
-
-            await MainThread.InvokeOnMainThreadAsync(() =>
-            {
-                IsLoadingPreview = true;
-                IsLoadingQualities = true;
-            });
-
-            var (useAccount, accountId) = ResolveDownloadAccountSelection();
-
-            var url = await EnsureCleanUrlInFieldAsync(activeUrl).ConfigureAwait(false);
-            var metadata = await _linkMetadata.GetMetadataAsync(
-                url, accountId, useAccount, ct).ConfigureAwait(false);
-
-            if (ct.IsCancellationRequested) return;
-
-            await MainThread.InvokeOnMainThreadAsync(() => ApplyMetadata(metadata));
-        }
-        catch (OperationCanceledException)
-        {
-            // другой выбор аккаунта
-        }
-        catch
-        {
-            if (ct.IsCancellationRequested) return;
-
-            await MainThread.InvokeOnMainThreadAsync(() =>
-            {
-                var platform = UrlPlatformDetector.TryDetect(Url, out var p, out _)
-                    ? p
-                    : SocialPlatform.YouTube;
-                ApplyMetadata(new LinkMetadataResult
-                {
-                    Qualities = [DownloadQualityOption.BestQuality(platform)]
-                });
-            });
-        }
-        finally
-        {
-            await MainThread.InvokeOnMainThreadAsync(() =>
-            {
-                if (ReferenceEquals(_metadataRefreshCts, owner) || !ct.IsCancellationRequested)
-                    FinishLinkMetadataLoading();
-            });
-        }
     }
 
     private async Task RefreshAfterUrlChangeAsync(CancellationToken ct)
     {
-        var owner = _urlRefreshCts;
-
-        if (string.IsNullOrWhiteSpace(Url))
+        var urlSnapshot = Url;
+        if (string.IsNullOrWhiteSpace(urlSnapshot)
+            || !UrlPlatformDetector.TryDetect(urlSnapshot, out _, out _))
         {
-            if (!string.IsNullOrWhiteSpace(_pendingDownloadUrl))
-                return;
-
-            await MainThread.InvokeOnMainThreadAsync(() =>
-            {
-                ClearLinkMetadataUi();
-                ResetAccountPickerUi();
-            });
-            return;
-        }
-
-        _pendingDownloadUrl = null;
-
-        if (!UrlPlatformDetector.TryDetect(Url, out _, out _))
-        {
-            await MainThread.InvokeOnMainThreadAsync(() =>
-            {
-                ClearLinkMetadataUi();
-                ResetAccountPickerUi();
-            });
             return;
         }
 
         try
         {
             await Task.Delay(200, ct).ConfigureAwait(false);
-            if (ct.IsCancellationRequested) return;
+            if (ct.IsCancellationRequested)
+                return;
 
-            await MainThread.InvokeOnMainThreadAsync(() =>
+            var current = Url;
+            if (string.IsNullOrWhiteSpace(current)
+                || !UrlPlatformDetector.TryDetect(current, out _, out _))
             {
-                IsLoadingPreview = true;
-                IsLoadingQualities = true;
-            });
+                return;
+            }
 
-            var url = await EnsureCleanUrlInFieldAsync(Url).ConfigureAwait(false);
-            _logger.LogDebug("RefreshAfterUrlChangeAsync: fetching metadata for {Url}", url);
-            await RefreshAccountPickerAsync(preserveUserSelection: false).ConfigureAwait(false);
-            if (ct.IsCancellationRequested) return;
+            if (!string.Equals(
+                    CleanUrlForDisplay(current),
+                    CleanUrlForDisplay(urlSnapshot),
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
 
-            var (useAccount, accountId) = ResolveDownloadAccountSelection();
-
-            var metadata = await _linkMetadata.GetMetadataAsync(
-                url, accountId, useAccount, ct).ConfigureAwait(false);
-
-            if (ct.IsCancellationRequested) return;
-
-            await MainThread.InvokeOnMainThreadAsync(() => ApplyMetadata(metadata));
+            var normalized = CleanUrlForDisplay(current);
+            await MainThread.InvokeOnMainThreadAsync(ClearUrlFieldOnly);
+            await EnqueuePreviewFromUrlAsync(normalized).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
             _logger.LogDebug("RefreshAfterUrlChangeAsync cancelled");
         }
-        catch (Exception ex)
+    }
+
+    private async Task EnqueuePreviewFromUrlAsync(string normalizedUrl)
+    {
+        LinkPreviewItemViewModel? item = null;
+        var accepted = await MainThread.InvokeOnMainThreadAsync(() =>
         {
-            _logger.LogError(ex, "RefreshAfterUrlChangeAsync failed for url={Url}", Url);
-            await MainThread.InvokeOnMainThreadAsync(() =>
-            {
-                var platform = UrlPlatformDetector.TryDetect(Url, out var p, out _)
-                    ? p
-                    : SocialPlatform.YouTube;
-                ApplyMetadata(new LinkMetadataResult
-                {
-                    Qualities = [DownloadQualityOption.BestQuality(platform)]
-                });
-            });
+            if (!TryInsertPreviewItem(normalizedUrl, out var created))
+                return false;
+
+            item = created;
+            return true;
+        }).ConfigureAwait(false);
+
+        if (!accepted || item is null)
+            return;
+
+        _ = LoadMetadataForPreviewItemAsync(item, item.MetadataCts!.Token);
+    }
+
+    private bool TryInsertPreviewItem(string normalizedUrl, out LinkPreviewItemViewModel? item)
+    {
+        normalizedUrl = ContentUrlNormalizer.Normalize(normalizedUrl);
+        item = null;
+
+        if (IsUrlAlreadyInQueue(normalizedUrl))
+        {
+            ClearUrlFieldOnly();
+            _ = _toast.ShowAsync("Эта ссылка уже добавлена в очередь.");
+            return false;
         }
-        finally
+
+        item = CreatePreviewItem(normalizedUrl);
+        PendingLinkPreviews.Insert(0, item);
+        NotifyPendingPreviewsChanged();
+        return true;
+    }
+
+    private static bool IsUrlAlreadyInQueue(string normalizedUrl, IEnumerable<LinkPreviewItemViewModel> previews, IEnumerable<PendingDownloadViewModel> activeDownloads)
+    {
+        return previews.Any(p => string.Equals(
+                   ContentUrlNormalizer.Normalize(p.Url),
+                   normalizedUrl,
+                   StringComparison.OrdinalIgnoreCase))
+               || activeDownloads.Any(j => j.IsActive && string.Equals(
+                   ContentUrlNormalizer.Normalize(j.Url),
+                   normalizedUrl,
+                   StringComparison.OrdinalIgnoreCase));
+    }
+
+    private bool IsUrlAlreadyInQueue(string normalizedUrl) =>
+        IsUrlAlreadyInQueue(normalizedUrl, PendingLinkPreviews, ActiveDownloads);
+
+    private LinkPreviewItemViewModel CreatePreviewItem(string normalizedUrl)
+    {
+        var item = new LinkPreviewItemViewModel(ContentUrlNormalizer.Normalize(normalizedUrl))
         {
-            await MainThread.InvokeOnMainThreadAsync(() =>
+            AccountSelectionChanged = preview =>
             {
-                if (ReferenceEquals(_urlRefreshCts, owner) || !ct.IsCancellationRequested)
-                    FinishLinkMetadataLoading();
-            });
+                if (preview.SelectedAccountOption is { IsNoAccount: false, AccountId: int accountId, Platform: var platform })
+                    _ = PersistAuthenticatedAccountChoiceAsync(platform.Value, accountId);
+
+                _ = RefreshMetadataForPreviewAsync(preview);
+            }
+        };
+        item.MetadataCts = new CancellationTokenSource();
+        return item;
+    }
+
+    private async Task RefreshMetadataForPreviewAsync(LinkPreviewItemViewModel item)
+    {
+        item.MetadataCts?.Cancel();
+        item.MetadataCts?.Dispose();
+        item.MetadataCts = new CancellationTokenSource();
+        var ct = item.MetadataCts.Token;
+
+        await MainThread.InvokeOnMainThreadAsync(() => item.IsLoadingMetadata = true);
+        NotifyPendingPreviewsChanged();
+
+        try
+        {
+            await Task.Delay(350, ct).ConfigureAwait(false);
+            if (ct.IsCancellationRequested || !PendingLinkPreviews.Contains(item))
+                return;
+
+            await LoadMetadataForPreviewItemAsync(item, ct).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            // выбран другой аккаунт
         }
     }
 
-    private void ApplyMetadata(LinkMetadataResult metadata)
+    private async Task LoadMetadataForPreviewItemAsync(LinkPreviewItemViewModel item, CancellationToken ct)
     {
-        var activeUrl = ResolveActiveDownloadUrl();
+        try
+        {
+            await RefreshAccountPickerForItemAsync(item, preserveUserSelection: false).ConfigureAwait(false);
+            if (ct.IsCancellationRequested || !PendingLinkPreviews.Contains(item))
+                return;
+
+            var (useAccount, accountId) = ResolveDownloadAccountSelection(item);
+            var metadata = await _linkMetadata.GetMetadataAsync(
+                item.Url, accountId, useAccount, ct).ConfigureAwait(false);
+
+            if (ct.IsCancellationRequested || !PendingLinkPreviews.Contains(item))
+                return;
+
+            await MainThread.InvokeOnMainThreadAsync(() => ApplyMetadataToItem(item, metadata));
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "LoadMetadataForPreviewItemAsync failed for url={Url}", item.Url);
+            if (ct.IsCancellationRequested || !PendingLinkPreviews.Contains(item))
+                return;
+
+            var platform = UrlPlatformDetector.TryDetect(item.Url, out var p, out _)
+                ? p
+                : SocialPlatform.YouTube;
+
+            await MainThread.InvokeOnMainThreadAsync(() =>
+                ApplyMetadataToItem(item, new LinkMetadataResult
+                {
+                    Qualities = [DownloadQualityOption.BestQuality(platform)]
+                }));
+        }
+        finally
+        {
+            if (!ct.IsCancellationRequested && PendingLinkPreviews.Contains(item))
+            {
+                await MainThread.InvokeOnMainThreadAsync(() => item.IsLoadingMetadata = false);
+                NotifyPendingPreviewsChanged();
+
+                if (!string.IsNullOrWhiteSpace(item.PreviewThumbnail))
+                    _ = LoadPreviewImageForItemAsync(item);
+            }
+        }
+    }
+
+    private void ApplyMetadataToItem(LinkPreviewItemViewModel item, LinkMetadataResult metadata)
+    {
         SocialPlatform platform = default;
         ContentKind kind = default;
-        var hasValidUrl = !string.IsNullOrWhiteSpace(activeUrl)
-                          && UrlPlatformDetector.TryDetect(activeUrl, out platform, out kind);
-
-        ShowLinkPreview = false;
+        var hasValidUrl = UrlPlatformDetector.TryDetect(item.Url, out platform, out kind);
 
         if (metadata.Preview is { } preview)
         {
-            _previewPlatform = preview.Platform;
-            PreviewTitle = preview.Title;
-            PreviewAuthor = string.IsNullOrWhiteSpace(preview.Author)
+            item.Platform = preview.Platform;
+            item.PreviewTitle = preview.Title;
+            item.PreviewAuthor = string.IsNullOrWhiteSpace(preview.Author)
                 ? SocialAccountAuth.GetPlatformTitle(preview.Platform)
                 : $"@{preview.Author.TrimStart('@')}";
-            PreviewThumbnail = preview.ThumbnailUrl;
-            ShowLinkPreview = !string.IsNullOrWhiteSpace(PreviewTitle)
-                              || !string.IsNullOrWhiteSpace(PreviewThumbnail);
+            item.PreviewThumbnail = preview.ThumbnailUrl;
 
             _logger.LogInformation(
-                "ApplyMetadata: preview metadata. Title={Title}, Author={Author}, Thumb={Thumb}, ShowLinkPreview={Show}",
-                PreviewTitle,
-                PreviewAuthor,
-                PreviewThumbnail,
-                ShowLinkPreview);
+                "ApplyMetadataToItem: url={Url}, title={Title}, author={Author}, thumb={Thumb}",
+                item.Url,
+                item.PreviewTitle,
+                item.PreviewAuthor,
+                item.PreviewThumbnail);
         }
-
-        if (!ShowLinkPreview && hasValidUrl)
+        else if (hasValidUrl)
         {
-            _previewPlatform = platform;
-            PreviewTitle = kind switch
+            item.Platform = platform;
+            item.PreviewTitle = kind switch
             {
                 ContentKind.Reel => "Reels",
                 ContentKind.Story => "Stories",
                 _ => SocialAccountAuth.GetPlatformTitle(platform)
             };
-            PreviewAuthor = SocialAccountAuth.GetPlatformTitle(platform);
-            PreviewThumbnail = null;
-            PreviewImageFile = null;
-            ShowLinkPreview = true;
+            item.PreviewAuthor = SocialAccountAuth.GetPlatformTitle(platform);
+            item.PreviewThumbnail = null;
+            item.PreviewImageFile = null;
 
             _logger.LogWarning(
-                "ApplyMetadata: fallback preview shell for {Platform}/{Kind}",
+                "ApplyMetadataToItem: fallback preview shell for {Platform}/{Kind}, url={Url}",
                 platform,
-                kind);
-        }
-        else if (!ShowLinkPreview)
-        {
-            _logger.LogWarning(
-                "ApplyMetadata: no preview from metadata. Qualities={QualityCount}",
-                metadata.Qualities.Count);
+                kind,
+                item.Url);
         }
 
-        if (ShowLinkPreview && hasValidUrl)
-        {
-            _pendingDownloadUrl = ContentUrlNormalizer.Normalize(activeUrl!);
-            ClearUrlFieldOnly();
-        }
-
-        QualityOptions.Clear();
+        item.QualityOptions.Clear();
         foreach (var q in metadata.Qualities)
-            QualityOptions.Add(q);
+            item.QualityOptions.Add(q);
 
-        SelectedQuality = metadata.Qualities.FirstOrDefault(q => q.IsDefault)
-                          ?? metadata.Qualities.FirstOrDefault();
-        ShowQualityPicker = QualityOptions.Count > 0;
+        item.SelectedQuality = metadata.Qualities.FirstOrDefault(q => q.IsDefault)
+                               ?? metadata.Qualities.FirstOrDefault();
+        item.ShowQualityPicker = item.QualityOptions.Count > 0;
 
-        _logger.LogDebug(
-            "ApplyMetadata: ShowQualityPicker={ShowQuality}, selected={Quality}",
-            ShowQualityPicker,
-            SelectedQuality?.Label);
-
-        UpdatePreviewAccountIndicators();
+        item.UpdateAuthIndicators(
+            item.Platform ?? platform,
+            item.SelectedAccountOption,
+            item.LastAppSettings,
+            item.LastPlatformAccounts,
+            item.LastDefaultAccount);
     }
 
-    private void UpdatePreviewAccountIndicators()
+    private async Task LoadPreviewImageForItemAsync(LinkPreviewItemViewModel item)
     {
-        if (!ShowLinkPreview)
-        {
-            PreviewPlatformIconFile = null;
-            PreviewAuthStatusIconFile = null;
-            PreviewUsesAuthenticatedAccount = false;
-            OnPropertyChanged(nameof(ShowPreviewAccountIndicators));
-            return;
-        }
+        item.ImageCts?.Cancel();
+        item.ImageCts?.Dispose();
+        item.ImageCts = new CancellationTokenSource();
+        var ct = item.ImageCts.Token;
+        var url = item.PreviewThumbnail;
 
-        var platform = ResolvePreviewPlatform();
-        PreviewPlatformIconFile = SocialPlatformIcons.GetIconFileName(platform);
-        PreviewUsesAuthenticatedAccount = ResolvePreviewUsesAuthenticatedAccount(
-            SelectedAccountOption,
-            _lastAppSettings,
-            _lastPlatformAccounts,
-            _lastDefaultAccount);
-        PreviewAuthStatusIconFile = SocialPlatformIcons.GetAuthStatusIconFileName(PreviewUsesAuthenticatedAccount);
-
-        OnPropertyChanged(nameof(ShowPreviewAccountIndicators));
-    }
-
-    private SocialPlatform ResolvePreviewPlatform()
-    {
-        if (_previewPlatform is { } platform)
-            return platform;
-
-        var activeUrl = ResolveActiveDownloadUrl();
-        return !string.IsNullOrWhiteSpace(activeUrl)
-               && UrlPlatformDetector.TryDetect(activeUrl, out var detected, out _)
-            ? detected
-            : SocialPlatform.YouTube;
-    }
-
-    private static bool ResolvePreviewUsesAuthenticatedAccount(
-        AccountPickerOption? selected,
-        AppUserSettings? appSettings,
-        IReadOnlyList<SocialAccount> accounts,
-        SocialAccount? defaultAccount)
-    {
-        if (selected?.IsNoAccount == true)
-            return false;
-
-        if (selected is { IsNoAccount: false, AccountId: not null })
-            return true;
-
-        if (appSettings?.PreferDownloadWithoutAccount == true && accounts.Count == 0)
-            return false;
-
-        var account = defaultAccount
-                      ?? accounts.FirstOrDefault(a => a.IsDefault)
-                      ?? accounts.FirstOrDefault(a => SocialAccountAuth.HasAuth(a))
-                      ?? accounts.FirstOrDefault();
-
-        return account is not null && SocialAccountAuth.HasAuth(account);
-    }
-
-    private async Task LoadPreviewImageAsync(string? url)
-    {
-        _previewImageCts?.Cancel();
-        _previewImageCts?.Dispose();
-        _previewImageCts = new CancellationTokenSource();
-        var ct = _previewImageCts.Token;
-
-        await MainThread.InvokeOnMainThreadAsync(() => PreviewImageFile = null);
+        await MainThread.InvokeOnMainThreadAsync(() => item.PreviewImageFile = null);
 
         if (string.IsNullOrWhiteSpace(url))
             return;
 
-        var fetchOptions = await BuildPreviewImageFetchOptionsAsync(ct).ConfigureAwait(false);
+        var fetchOptions = await BuildPreviewImageFetchOptionsAsync(item, ct).ConfigureAwait(false);
         var path = await _remoteImageCache.GetCachedFilePathAsync(url, fetchOptions, ct).ConfigureAwait(false);
-        if (ct.IsCancellationRequested)
+        if (ct.IsCancellationRequested || !PendingLinkPreviews.Contains(item))
             return;
 
-        await MainThread.InvokeOnMainThreadAsync(() => PreviewImageFile = path);
+        await MainThread.InvokeOnMainThreadAsync(() => item.PreviewImageFile = path);
     }
 
-    private async Task<RemoteImageRequestOptions?> BuildPreviewImageFetchOptionsAsync(CancellationToken cancellationToken)
+    private async Task<RemoteImageRequestOptions?> BuildPreviewImageFetchOptionsAsync(
+        LinkPreviewItemViewModel item,
+        CancellationToken cancellationToken)
     {
-        if (_previewPlatform != SocialPlatform.Instagram)
+        if (item.Platform != SocialPlatform.Instagram)
             return null;
 
-        var cookieHeader = await ResolvePreviewInstagramCookieHeaderAsync(cancellationToken).ConfigureAwait(false);
+        var cookieHeader = await ResolvePreviewInstagramCookieHeaderAsync(item, cancellationToken)
+            .ConfigureAwait(false);
         return RemoteImageRequestOptions.ForInstagram(cookieHeader);
     }
 
-    private async Task<string?> ResolvePreviewInstagramCookieHeaderAsync(CancellationToken cancellationToken)
+    private async Task<string?> ResolvePreviewInstagramCookieHeaderAsync(
+        LinkPreviewItemViewModel item,
+        CancellationToken cancellationToken)
     {
-        var (useAccount, accountId) = ResolveDownloadAccountSelection();
+        var (useAccount, accountId) = ResolveDownloadAccountSelection(item);
         SocialAccount? account = null;
 
         if (useAccount && accountId is int id)
             account = await _accountService.GetAccountByIdAsync(id, cancellationToken).ConfigureAwait(false);
 
-        account ??= _lastDefaultAccount
-                    ?? _lastPlatformAccounts.FirstOrDefault(a => a.IsDefault)
-                    ?? _lastPlatformAccounts.FirstOrDefault(a => SocialAccountAuth.HasAuth(a));
+        account ??= item.LastDefaultAccount
+                    ?? item.LastPlatformAccounts.FirstOrDefault(a => a.IsDefault)
+                    ?? item.LastPlatformAccounts.FirstOrDefault(a => SocialAccountAuth.HasAuth(a));
 
         if (account is null || !SocialAccountAuth.HasAuth(account))
             return null;
@@ -840,12 +682,26 @@ public partial class DownloadViewModel : ObservableObject,
         return SocialAccountAuth.BuildCookieHeader(account);
     }
 
-    private void FinishLinkMetadataLoading()
+    private void RemovePreviewItem(LinkPreviewItemViewModel item)
     {
-        IsLoadingPreview = false;
-        IsLoadingQualities = false;
-        if (ShowLinkPreview && !string.IsNullOrWhiteSpace(PreviewThumbnail))
-            _ = LoadPreviewImageAsync(PreviewThumbnail);
+        item.MetadataCts?.Cancel();
+        item.MetadataCts?.Dispose();
+        item.MetadataCts = null;
+
+        item.ImageCts?.Cancel();
+        item.ImageCts?.Dispose();
+        item.ImageCts = null;
+
+        PendingLinkPreviews.Remove(item);
+        NotifyPendingPreviewsChanged();
+    }
+
+    private void NotifyPendingPreviewsChanged()
+    {
+        OnPropertyChanged(nameof(HasPendingLinkPreviews));
+        OnPropertyChanged(nameof(IsLoadingLinkMetadata));
+        OnPropertyChanged(nameof(ShowLinkMetadataReady));
+        OnPropertyChanged(nameof(ShowNewTagPanel));
     }
 
     private void CancelPendingUrlWork()
@@ -853,17 +709,6 @@ public partial class DownloadViewModel : ObservableObject,
         _urlRefreshCts?.Cancel();
         _urlRefreshCts?.Dispose();
         _urlRefreshCts = null;
-
-        _metadataRefreshCts?.Cancel();
-        _metadataRefreshCts?.Dispose();
-        _metadataRefreshCts = null;
-
-        _previewImageCts?.Cancel();
-        _previewImageCts?.Dispose();
-        _previewImageCts = null;
-
-        IsLoadingPreview = false;
-        IsLoadingQualities = false;
     }
 
     private Task ClearDownloadInputAsync() =>
@@ -872,14 +717,11 @@ public partial class DownloadViewModel : ObservableObject,
     private void ClearDownloadInputCore()
     {
         CancelPendingUrlWork();
-        _pendingDownloadUrl = null;
 
         _suppressUrlNormalization = true;
         Url = string.Empty;
         _suppressUrlNormalization = false;
 
-        ClearLinkMetadataUi();
-        ResetAccountPickerUi();
         OnPropertyChanged(nameof(HasUrl));
 
         if (Shell.Current?.CurrentPage is Page page)
@@ -894,57 +736,16 @@ public partial class DownloadViewModel : ObservableObject,
         OnPropertyChanged(nameof(HasUrl));
     }
 
-    private string? ResolveActiveDownloadUrl()
+    private async Task RefreshAccountPickerForItemAsync(
+        LinkPreviewItemViewModel item,
+        bool preserveUserSelection = false)
     {
-        if (!string.IsNullOrWhiteSpace(Url))
-            return CleanUrlForDisplay(Url);
-
-        return _pendingDownloadUrl;
-    }
-
-    private void ClearLinkMetadataUi()
-    {
-        _pendingDownloadUrl = null;
-        _previewPlatform = null;
-        ShowLinkPreview = false;
-        PreviewTitle = null;
-        PreviewAuthor = null;
-        PreviewThumbnail = null;
-        PreviewImageFile = null;
-        PreviewPlatformIconFile = null;
-        PreviewAuthStatusIconFile = null;
-        PreviewUsesAuthenticatedAccount = false;
-        OnPropertyChanged(nameof(ShowPreviewAccountIndicators));
-
-        ShowQualityPicker = false;
-        SelectedQuality = null;
-        QualityOptions.Clear();
-    }
-
-    private void ResetAccountPickerUi()
-    {
-        ShowAccountPicker = false;
-        _suppressAccountSelectionChange = true;
-        SelectedAccountOption = null;
-        _suppressAccountSelectionChange = false;
-        AccountOptions.Clear();
-        _lastPlatformAccounts = [];
-        _lastDefaultAccount = null;
-        _lastAppSettings = null;
-    }
-
-    private async Task RefreshAccountPickerAsync(bool preserveUserSelection = false)
-    {
-        var activeUrl = ResolveActiveDownloadUrl();
-        if (string.IsNullOrWhiteSpace(activeUrl)
-            || !UrlPlatformDetector.TryDetect(activeUrl, out var platform, out _))
-        {
-            await MainThread.InvokeOnMainThreadAsync(ResetAccountPickerUi);
+        if (!UrlPlatformDetector.TryDetect(item.Url, out var platform, out _))
             return;
-        }
 
-        var preserveNoAccount = preserveUserSelection && SelectedAccountOption?.IsNoAccount == true;
-        int? preserveAccountId = preserveUserSelection && SelectedAccountOption is { IsNoAccount: false, AccountId: var pid }
+        var preserveNoAccount = preserveUserSelection && item.SelectedAccountOption?.IsNoAccount == true;
+        int? preserveAccountId = preserveUserSelection
+                                 && item.SelectedAccountOption is { IsNoAccount: false, AccountId: var pid }
             ? pid
             : null;
 
@@ -952,50 +753,53 @@ public partial class DownloadViewModel : ObservableObject,
         var appSettings = await _settings.GetAppSettingsAsync().ConfigureAwait(false);
         var defaultAccount = await _accountService.GetDefaultAccountAsync(platform).ConfigureAwait(false);
 
-        _lastPlatformAccounts = accounts;
-        _lastDefaultAccount = defaultAccount;
-        _lastAppSettings = appSettings;
+        item.LastPlatformAccounts = accounts;
+        item.LastDefaultAccount = defaultAccount;
+        item.LastAppSettings = appSettings;
 
         await MainThread.InvokeOnMainThreadAsync(() =>
         {
-            AccountOptions.Clear();
-            AccountOptions.Add(AccountPickerOption.WithoutAccount(platform));
+            item.AccountOptions.Clear();
+            item.AccountOptions.Add(AccountPickerOption.WithoutAccount(platform));
 
             foreach (var account in accounts)
-                AccountOptions.Add(AccountPickerOption.FromAccount(account, account.IsDefault));
+                item.AccountOptions.Add(AccountPickerOption.FromAccount(account, account.IsDefault));
 
-            var withoutAccount = AccountOptions.FirstOrDefault(o => o.IsNoAccount);
-            _suppressAccountSelectionChange = true;
+            var withoutAccount = item.AccountOptions.FirstOrDefault(o => o.IsNoAccount);
+            AccountPickerOption? selected;
 
             if (preserveNoAccount)
-                SelectedAccountOption = withoutAccount ?? AccountOptions.FirstOrDefault();
+                selected = withoutAccount ?? item.AccountOptions.FirstOrDefault();
             else if (preserveAccountId is int accountId)
             {
-                SelectedAccountOption = AccountOptions.FirstOrDefault(o => o.AccountId == accountId)
-                                        ?? withoutAccount
-                                        ?? AccountOptions.FirstOrDefault();
+                selected = item.AccountOptions.FirstOrDefault(o => o.AccountId == accountId)
+                           ?? withoutAccount
+                           ?? item.AccountOptions.FirstOrDefault();
             }
             else if (TryGetSavedAccountId(appSettings, platform, out var savedAccountId)
-                     && AccountOptions.FirstOrDefault(o => o.AccountId == savedAccountId) is { } savedOption)
+                     && item.AccountOptions.FirstOrDefault(o => o.AccountId == savedAccountId) is { } savedOption)
             {
-                SelectedAccountOption = savedOption;
+                selected = savedOption;
             }
             else
             {
-                SelectedAccountOption = ResolveInitialAccountOption(
-                    accounts,
-                    defaultAccount,
-                    withoutAccount);
+                selected = ResolveInitialAccountOption(accounts, defaultAccount, withoutAccount);
             }
 
-            _suppressAccountSelectionChange = false;
+            item.SetSelectedAccountOption(selected);
 
-            AccountPickerHint = SelectedAccountOption?.IsNoAccount == true
+            item.AccountPickerHint = item.SelectedAccountOption?.IsNoAccount == true
                 ? $"Публичный контент {SocialAccountAuth.GetPlatformTitle(platform)} без cookies. Для закрытого — выберите аккаунт или добавьте в настройках."
                 : $"Скачивание с cookies аккаунта ({SocialAccountAuth.GetPlatformTitle(platform)}).";
 
-            ShowAccountPicker = ShouldShowAccountPicker(appSettings, platform, accounts, defaultAccount);
-            UpdatePreviewAccountIndicators();
+            item.ShowAccountPicker = ShouldShowAccountPicker(appSettings, platform, accounts, defaultAccount);
+            item.Platform ??= platform;
+            item.UpdateAuthIndicators(
+                platform,
+                item.SelectedAccountOption,
+                appSettings,
+                accounts,
+                defaultAccount);
         });
     }
 
@@ -1015,18 +819,18 @@ public partial class DownloadViewModel : ObservableObject,
         return AccountPickerOption.FromAccount(preferred, preferred.IsDefault);
     }
 
-    private (bool UseAccount, int? AccountId) ResolveDownloadAccountSelection()
+    private (bool UseAccount, int? AccountId) ResolveDownloadAccountSelection(LinkPreviewItemViewModel item)
     {
-        if (SelectedAccountOption is { IsNoAccount: false, AccountId: int selectedId })
+        if (item.SelectedAccountOption is { IsNoAccount: false, AccountId: int selectedId })
             return (true, selectedId);
 
-        if (SelectedAccountOption?.IsNoAccount == true)
+        if (item.SelectedAccountOption?.IsNoAccount == true)
             return (false, null);
 
-        var account = _lastDefaultAccount
-                      ?? _lastPlatformAccounts.FirstOrDefault(a => a.IsDefault)
-                      ?? _lastPlatformAccounts.FirstOrDefault(a => SocialAccountAuth.HasAuth(a))
-                      ?? _lastPlatformAccounts.FirstOrDefault();
+        var account = item.LastDefaultAccount
+                      ?? item.LastPlatformAccounts.FirstOrDefault(a => a.IsDefault)
+                      ?? item.LastPlatformAccounts.FirstOrDefault(a => SocialAccountAuth.HasAuth(a))
+                      ?? item.LastPlatformAccounts.FirstOrDefault();
 
         if (account is not null && SocialAccountAuth.HasAuth(account))
             return (true, account.Id);
@@ -1134,11 +938,22 @@ public partial class DownloadViewModel : ObservableObject,
 
     private void SetUrl(string value)
     {
+        if (string.IsNullOrWhiteSpace(value))
+            return;
+
         _holdDownloadFormClear = false;
-        _pendingDownloadUrl = null;
+        var cleaned = CleanUrlForDisplay(value);
+
+        if (UrlPlatformDetector.TryDetect(cleaned, out _, out _))
+        {
+            _ = EnqueuePreviewFromUrlAsync(cleaned);
+            return;
+        }
+
         _suppressUrlNormalization = true;
-        Url = value;
+        Url = cleaned;
         _suppressUrlNormalization = false;
+        OnPropertyChanged(nameof(HasUrl));
         ScheduleUrlRefresh();
     }
 
@@ -1148,29 +963,6 @@ public partial class DownloadViewModel : ObservableObject,
         return UrlPlatformDetector.TryDetect(trimmed, out _, out _)
             ? ContentUrlNormalizer.Normalize(trimmed)
             : trimmed;
-    }
-
-    private async Task<string> EnsureCleanUrlInFieldAsync(string currentUrl)
-    {
-        var cleaned = CleanUrlForDisplay(currentUrl);
-
-        if (!string.IsNullOrWhiteSpace(Url)
-            && !string.Equals(cleaned, Url.Trim(), StringComparison.Ordinal))
-        {
-            await MainThread.InvokeOnMainThreadAsync(() =>
-            {
-                _suppressUrlNormalization = true;
-                Url = cleaned;
-                _suppressUrlNormalization = false;
-            });
-        }
-        else if (string.IsNullOrWhiteSpace(Url)
-                 && !string.Equals(cleaned, _pendingDownloadUrl, StringComparison.Ordinal))
-        {
-            await MainThread.InvokeOnMainThreadAsync(() => _pendingDownloadUrl = cleaned);
-        }
-
-        return cleaned;
     }
 
     public ObservableCollection<ContentTag> Tags { get; } = [];
@@ -1205,7 +997,8 @@ public partial class DownloadViewModel : ObservableObject,
         string normalizedUrl,
         bool useAccount,
         int? accountId,
-        AppUserSettings appSettings)
+        AppUserSettings appSettings,
+        DownloadQualityOption? quality)
     {
         var tagIds = _selectedTagIds.ToList();
         var request = BuildDownloadRequest(
@@ -1214,7 +1007,7 @@ public partial class DownloadViewModel : ObservableObject,
             useAccount,
             accountId,
             tagIds,
-            SelectedQuality);
+            quality);
 
         try
         {
@@ -1249,7 +1042,7 @@ public partial class DownloadViewModel : ObservableObject,
                     job.Progress = 1;
                     job.IsCompleted = true;
                     _holdDownloadFormClear = true;
-                    ClearDownloadInputCore();
+                    ClearUrlFieldOnly();
                     await RefreshRecentAsync();
                     ActiveDownloads.Remove(job);
                 }
