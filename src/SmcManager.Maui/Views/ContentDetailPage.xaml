@@ -84,18 +84,6 @@
                             </ImageButton.Source>
                         </ImageButton>
 
-                        <ImageButton x:Name="ShareMediaButton"
-                                     Style="{StaticResource IconActionButtonStyle}"
-                                     WidthRequest="40"
-                                     HeightRequest="40"
-                                     Padding="8"
-                                     Margin="8"
-                                     HorizontalOptions="End"
-                                     VerticalOptions="Start"
-                                     IsVisible="{Binding HasMediaSlides}"
-                                     Command="{Binding ShareMediaCommand}"
-                                     SemanticProperties.Description="Поделиться файлом"
-                                     ZIndex="3" />
                     </Grid>
 
                     <VerticalStackLayout Grid.Row="1"
@@ -124,6 +112,13 @@
                         HorizontalOptions="Center"
                         SemanticProperties.Description="Следующий слайд" />
             </Grid>
+
+            <Button x:Name="ShareCurrentMediaButton"
+                    Style="{StaticResource SecondaryIconButtonStyle}"
+                    HorizontalOptions="Center"
+                    IsVisible="{Binding HasMediaSlides}"
+                    Command="{Binding ShareMediaCommand}"
+                    SemanticProperties.Description="Поделиться текущим файлом" />
 
             <Label Text="{Binding AuthorTitle}"
                    Style="{StaticResource EmojiCapableLabelStyle}"
@@ -393,6 +388,10 @@
                             Style="{StaticResource SecondaryIconButtonStyle}"
                             Command="{Binding OpenFolderCommand}"
                             SemanticProperties.Description="Открыть папку" />
+                    <Button x:Name="ShareAllContentButton"
+                            Style="{StaticResource SecondaryIconButtonStyle}"
+                            Command="{Binding ShareAllContentCommand}"
+                            SemanticProperties.Description="Поделиться всем контентом" />
                     <Button x:Name="OpenSourceButton"
                             Style="{StaticResource PrimaryIconButtonStyle}"
                             Command="{Binding OpenSourceCommand}"

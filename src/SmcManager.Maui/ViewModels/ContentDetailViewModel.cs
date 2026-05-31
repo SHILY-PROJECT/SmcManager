@@ -585,11 +585,99 @@ public partial class ContentDetailViewModel : ObservableObject, IRecipient<TagsC
         if (!File.Exists(path))
             return;
 
-        await Share.Default.RequestAsync(new ShareFileRequest
+        try
         {
-            Title = Path.GetFileName(path),
-            File = new ShareFile(path)
-        });
+            await Share.Default.RequestAsync(new ShareFileRequest
+            {
+                Title = Path.GetFileName(path),
+                File = new ShareFile(path)
+            });
+        }
+        catch (Exception ex)
+        {
+            await _toast.ShowWarningAsync($"Не удалось отправить файл: {ex.Message}");
+        }
+    }
+
+    [RelayCommand]
+    private async Task ShareAllContentAsync()
+    {
+        if (_content is null)
+            return;
+
+        var text = BuildShareText(_content.Caption, _content.UserComment);
+        var files = CollectShareableFiles();
+        if (files.Count == 0 && string.IsNullOrWhiteSpace(text))
+        {
+            await _toast.ShowWarningAsync("Нечего отправить.");
+            return;
+        }
+
+        var title = string.IsNullOrWhiteSpace(AuthorTitle) ? "Контент" : AuthorTitle;
+
+        try
+        {
+            if (files.Count == 0)
+            {
+                await Share.Default.RequestAsync(new ShareTextRequest
+                {
+                    Title = title,
+                    Text = text!
+                });
+                return;
+            }
+
+            if (files.Count == 1 && string.IsNullOrWhiteSpace(text))
+            {
+                await Share.Default.RequestAsync(new ShareFileRequest
+                {
+                    Title = title,
+                    File = files[0]
+                });
+                return;
+            }
+
+            if (!string.IsNullOrWhiteSpace(text))
+            {
+                var textPath = Path.Combine(Path.GetTempPath(), $"smcmanager-{Guid.NewGuid():N}.txt");
+                await File.WriteAllTextAsync(textPath, text);
+                files.Insert(0, new ShareFile(textPath));
+            }
+
+            await Share.Default.RequestAsync(new ShareMultipleFilesRequest
+            {
+                Title = title,
+                Files = files
+            });
+        }
+        catch (Exception ex)
+        {
+            await _toast.ShowWarningAsync($"Не удалось отправить: {ex.Message}");
+        }
+    }
+
+    private List<ShareFile> CollectShareableFiles()
+    {
+        var files = new List<ShareFile>();
+        foreach (var slide in MediaSlides)
+        {
+            var path = Path.GetFullPath(slide.LocalPath);
+            if (File.Exists(path))
+                files.Add(new ShareFile(path));
+        }
+
+        return files;
+    }
+
+    private static string? BuildShareText(string? caption, string? userComment)
+    {
+        var parts = new List<string>();
+        if (!string.IsNullOrWhiteSpace(caption))
+            parts.Add(caption.Trim());
+        if (!string.IsNullOrWhiteSpace(userComment))
+            parts.Add(userComment.Trim());
+
+        return parts.Count > 0 ? string.Join("\n\n", parts) : null;
     }
 
     [RelayCommand]

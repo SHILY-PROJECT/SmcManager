@@ -40,26 +40,36 @@
                        IsVisible="{Binding ShowSubtitle, Source={x:Reference Root}}" />
             </VerticalStackLayout>
 
-            <Border Grid.Column="2"
-                    WidthRequest="44"
-                    HeightRequest="44"
-                    BackgroundColor="{DynamicResource BackgroundSecondary}"
-                    Stroke="{DynamicResource Divider}"
-                    StrokeThickness="1"
-                    VerticalOptions="Center">
-                <Border.StrokeShape>
-                    <RoundRectangle CornerRadius="12" />
-                </Border.StrokeShape>
-                <ImageButton x:Name="SettingsButton"
-                             WidthRequest="44"
-                             HeightRequest="44"
-                             Padding="10"
-                             BackgroundColor="Transparent"
-                             HorizontalOptions="Center"
-                             VerticalOptions="Center"
-                             Clicked="OnSettingsClicked"
-                             SemanticProperties.Description="Настройки" />
-            </Border>
+            <HorizontalStackLayout Grid.Column="2"
+                                   Spacing="8"
+                                   HorizontalOptions="End"
+                                   VerticalOptions="Center">
+                <Button x:Name="HeaderActionButton"
+                        Style="{StaticResource SecondaryIconButtonStyle}"
+                        IsVisible="{Binding IsHeaderActionVisible, Source={x:Reference Root}}"
+                        Command="{Binding HeaderActionCommand, Source={x:Reference Root}}"
+                        VerticalOptions="Center"
+                        SemanticProperties.Description="{Binding HeaderActionDescription, Source={x:Reference Root}}" />
+                <Border WidthRequest="44"
+                        HeightRequest="44"
+                        BackgroundColor="{DynamicResource BackgroundSecondary}"
+                        Stroke="{DynamicResource Divider}"
+                        StrokeThickness="1"
+                        VerticalOptions="Center">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="12" />
+                    </Border.StrokeShape>
+                    <ImageButton x:Name="SettingsButton"
+                                 WidthRequest="44"
+                                 HeightRequest="44"
+                                 Padding="10"
+                                 BackgroundColor="Transparent"
+                                 HorizontalOptions="Center"
+                                 VerticalOptions="Center"
+                                 Clicked="OnSettingsClicked"
+                                 SemanticProperties.Description="Настройки" />
+                </Border>
+            </HorizontalStackLayout>
         </Grid>
     </Border>
 </ContentView>

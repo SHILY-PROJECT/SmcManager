@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.Messaging;
+using System.Windows.Input;
 using SmcManager.Core.Enums;
 using SmcManager.Maui.Messages;
 using SmcManager.Maui.Services;
@@ -29,6 +30,15 @@ public partial class AppHeaderView : ContentView,
     public static readonly BindableProperty ShowSubtitleProperty = BindableProperty.Create(
         nameof(ShowSubtitle), typeof(bool), typeof(AppHeaderView), false);
 
+    public static readonly BindableProperty HeaderActionCommandProperty = BindableProperty.Create(
+        nameof(HeaderActionCommand), typeof(ICommand), typeof(AppHeaderView));
+
+    public static readonly BindableProperty IsHeaderActionVisibleProperty = BindableProperty.Create(
+        nameof(IsHeaderActionVisible), typeof(bool), typeof(AppHeaderView), false);
+
+    public static readonly BindableProperty HeaderActionDescriptionProperty = BindableProperty.Create(
+        nameof(HeaderActionDescription), typeof(string), typeof(AppHeaderView), string.Empty);
+
     public string Title
     {
         get => (string)GetValue(TitleProperty);
@@ -52,6 +62,27 @@ public partial class AppHeaderView : ContentView,
         get => (bool)GetValue(ShowSubtitleProperty);
         set => SetValue(ShowSubtitleProperty, value);
     }
+
+    public ICommand? HeaderActionCommand
+    {
+        get => (ICommand?)GetValue(HeaderActionCommandProperty);
+        set => SetValue(HeaderActionCommandProperty, value);
+    }
+
+    public bool IsHeaderActionVisible
+    {
+        get => (bool)GetValue(IsHeaderActionVisibleProperty);
+        set => SetValue(IsHeaderActionVisibleProperty, value);
+    }
+
+    public string HeaderActionDescription
+    {
+        get => (string)GetValue(HeaderActionDescriptionProperty);
+        set => SetValue(HeaderActionDescriptionProperty, value);
+    }
+
+    public void SetHeaderActionIcon(string fileName) =>
+        ThemedIconHelper.SetImageSource(HeaderActionButton, fileName);
 
     public AppHeaderView()
     {

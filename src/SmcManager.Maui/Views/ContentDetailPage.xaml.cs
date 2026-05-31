@@ -147,8 +147,9 @@ public partial class ContentDetailPage : ContentPage, IRecipient<ThemeChangedMes
         ThemedIconHelper.SetImageSource(DeleteContentButton, palette.DeleteIcon);
         ThemedIconHelper.SetImageSource(OpenInExplorerButton, palette.ExplorerIcon);
         ThemedIconHelper.SetImageSource(OpenFolderButton, palette.FolderIcon);
+        ThemedIconHelper.SetImageSource(ShareCurrentMediaButton, palette.ShareIcon);
+        ThemedIconHelper.SetImageSource(ShareAllContentButton, palette.ShareIcon);
         ThemedIconHelper.SetImageSource(OpenSourceButton, palette.OpenSourceIcon);
-        ThemedIconHelper.SetSource(ShareMediaButton, palette.ShareIcon);
     }
 
     private void AttachCarouselHandlers()
