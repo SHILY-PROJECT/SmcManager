@@ -3,7 +3,7 @@ using SmcManager.Maui.Services;
 namespace SmcManager.Maui.Views.Controls;
 
 /// <summary>
-/// Локальный или удалённый путь/URL в Image.Source без ImageSource во ViewModel.
+/// Локальный путь в Image.Source без ImageSource во ViewModel.
 /// </summary>
 public partial class LocalImageView : ContentView
 {
@@ -44,7 +44,12 @@ public partial class LocalImageView : ContentView
         set => SetValue(ImageHeightProperty, value);
     }
 
-    public LocalImageView() => InitializeComponent();
+    public LocalImageView()
+    {
+        InitializeComponent();
+        Loaded += (_, _) => UpdateImage();
+        HandlerChanged += (_, _) => UpdateImage();
+    }
 
     private static void OnImagePathChanged(BindableObject bindable, object oldValue, object newValue)
     {
@@ -52,6 +57,18 @@ public partial class LocalImageView : ContentView
             view.UpdateImage();
     }
 
-    private void UpdateImage() =>
-        PreviewImage.Source = RemoteImageCache.SourceFromPathOrUrl(ImagePath);
+    private void UpdateImage()
+    {
+        if (PreviewImage is null || Handler is null)
+            return;
+
+        try
+        {
+            PreviewImage.Source = RemoteImageCache.SourceFromPathOrUrl(ImagePath);
+        }
+        catch
+        {
+            PreviewImage.Source = null;
+        }
+    }
 }

@@ -121,18 +121,20 @@
                                                        VerticalOptions="Start"
                                                        Spacing="6"
                                                        IsVisible="{Binding ShowPreviewAccountIndicators}">
-                                    <Image Source="{Binding PreviewAuthStatusIconFile}"
-                                           WidthRequest="18"
-                                           HeightRequest="18"
-                                           Aspect="AspectFit"
-                                           VerticalOptions="Center"
-                                           SemanticProperties.Description="{Binding PreviewAuthStatusDescription}" />
-                                    <Image Source="{Binding PreviewPlatformIconFile}"
-                                           WidthRequest="18"
-                                           HeightRequest="18"
-                                           Aspect="AspectFit"
-                                           VerticalOptions="Center"
-                                           SemanticProperties.Description="Соцсеть" />
+                                    <Grid WidthRequest="20"
+                                          HeightRequest="20"
+                                          VerticalOptions="Center">
+                                        <Image Source="{Binding PreviewAuthStatusIconFile}"
+                                               Style="{StaticResource PreviewIndicatorIconStyle}"
+                                               SemanticProperties.Description="{Binding PreviewAuthStatusDescription}" />
+                                    </Grid>
+                                    <Grid WidthRequest="20"
+                                          HeightRequest="20"
+                                          VerticalOptions="Center">
+                                        <Image Source="{Binding PreviewPlatformIconFile}"
+                                               Style="{StaticResource PreviewIndicatorIconStyle}"
+                                               SemanticProperties.Description="Соцсеть" />
+                                    </Grid>
                                 </HorizontalStackLayout>
                             </Grid>
 

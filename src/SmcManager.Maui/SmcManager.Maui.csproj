@@ -16,7 +16,7 @@
         <!-- Имя под иконкой на Android и в списке приложений (см. AppBranding.FullTitle) -->
         <ApplicationTitle>SmcManager - от меня щас что требуется?</ApplicationTitle>
         <ApplicationId>com.shily.smcmanager</ApplicationId>
-        <ApplicationDisplayVersion>0.1.74</ApplicationDisplayVersion>
+        <ApplicationDisplayVersion>0.1.77</ApplicationDisplayVersion>
 <!--        <ApplicationVersion>104</ApplicationVersion>-->
         <WindowsPackageType>None</WindowsPackageType>
         <ApplicationIcon Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">Resources\AppIcon\appicon.ico</ApplicationIcon>
@@ -50,7 +50,7 @@
         <MauiImage Update="Resources\Images\icon_link.svg" BaseSize="24,24" Resize="True" />
         <MauiImage Update="Resources\Images\icon_share*.svg" BaseSize="24,24" Resize="True" />
         <MauiImage Update="Resources\Images\icon_platform_*.svg" BaseSize="20,20" Resize="True" />
-        <MauiImage Update="Resources\Images\icon_user_*.svg" BaseSize="18,18" Resize="True" />
+        <MauiImage Update="Resources\Images\icon_user_*.svg" BaseSize="20,20" Resize="True" />
         <MauiImage Update="Resources\Images\icon_expand*.svg" BaseSize="24,24" Resize="True" />
         <MauiImage Update="Resources\Images\icon_collapse*.svg" BaseSize="24,24" Resize="True" />
         <MauiFont Include="Resources\Fonts\*" />

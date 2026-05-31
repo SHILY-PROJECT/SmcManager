@@ -78,6 +78,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<ShareLinkService>();
         builder.Services.AddSingleton<ThemeService>();
         builder.Services.AddSingleton<IFileExplorerService, FileExplorerService>();
+        builder.Services.AddSingleton<IMediaShareService, MediaShareService>();
         builder.Services.AddSingleton<ILinkLauncherService, LinkLauncherService>();
         builder.Services.AddSingleton<TagCreationService>();
         builder.Services.AddSingleton<TagListService>();

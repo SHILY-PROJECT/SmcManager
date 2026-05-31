@@ -57,6 +57,10 @@ public class ShareLinkService
             await NavigateToDownloadTabAsync().ConfigureAwait(false);
             await DeliverPendingShareAsync().ConfigureAwait(false);
         }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"ProcessPendingAsync failed: {ex}");
+        }
         finally
         {
             ProcessGate.Release();

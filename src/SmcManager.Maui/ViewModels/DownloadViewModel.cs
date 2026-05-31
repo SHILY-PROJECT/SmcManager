@@ -788,11 +788,39 @@ public partial class DownloadViewModel : ObservableObject,
         if (string.IsNullOrWhiteSpace(url))
             return;
 
-        var path = await _remoteImageCache.GetCachedFilePathAsync(url, ct).ConfigureAwait(false);
+        var fetchOptions = await BuildPreviewImageFetchOptionsAsync(ct).ConfigureAwait(false);
+        var path = await _remoteImageCache.GetCachedFilePathAsync(url, fetchOptions, ct).ConfigureAwait(false);
         if (ct.IsCancellationRequested)
             return;
 
         await MainThread.InvokeOnMainThreadAsync(() => PreviewImageFile = path);
+    }
+
+    private async Task<RemoteImageRequestOptions?> BuildPreviewImageFetchOptionsAsync(CancellationToken cancellationToken)
+    {
+        if (_previewPlatform != SocialPlatform.Instagram)
+            return null;
+
+        var cookieHeader = await ResolvePreviewInstagramCookieHeaderAsync(cancellationToken).ConfigureAwait(false);
+        return RemoteImageRequestOptions.ForInstagram(cookieHeader);
+    }
+
+    private async Task<string?> ResolvePreviewInstagramCookieHeaderAsync(CancellationToken cancellationToken)
+    {
+        var (useAccount, accountId) = ResolveDownloadAccountSelection();
+        SocialAccount? account = null;
+
+        if (useAccount && accountId is int id)
+            account = await _accountService.GetAccountByIdAsync(id, cancellationToken).ConfigureAwait(false);
+
+        account ??= _lastDefaultAccount
+                    ?? _lastPlatformAccounts.FirstOrDefault(a => a.IsDefault)
+                    ?? _lastPlatformAccounts.FirstOrDefault(a => SocialAccountAuth.HasAuth(a));
+
+        if (account is null || !SocialAccountAuth.HasAuth(account))
+            return null;
+
+        return SocialAccountAuth.BuildCookieHeader(account);
     }
 
     private void FinishLinkMetadataLoading()

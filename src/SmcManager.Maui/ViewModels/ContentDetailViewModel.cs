@@ -31,6 +31,7 @@ public partial class ContentDetailViewModel : ObservableObject, IRecipient<TagsC
     private readonly TagCreationService _tagCreation;
     private readonly TagColorPickerService _colorPicker;
     private readonly BottomToastService _toast;
+    private readonly IMediaShareService _mediaShare;
 
     private ContentItem? _content;
     private DateTime _enteredAtUtc;
@@ -54,7 +55,8 @@ public partial class ContentDetailViewModel : ObservableObject, IRecipient<TagsC
         TagListService tagList,
         TagCreationService tagCreation,
         TagColorPickerService colorPicker,
-        BottomToastService toast)
+        BottomToastService toast,
+        IMediaShareService mediaShare)
     {
         _repository = repository;
         _fileExplorer = fileExplorer;
@@ -65,6 +67,7 @@ public partial class ContentDetailViewModel : ObservableObject, IRecipient<TagsC
         _tagCreation = tagCreation;
         _colorPicker = colorPicker;
         _toast = toast;
+        _mediaShare = mediaShare;
         WeakReferenceMessenger.Default.Register<TagsChangedMessage>(this);
         WeakReferenceMessenger.Default.Register<TagSortChangedMessage>(this);
     }
@@ -617,38 +620,8 @@ public partial class ContentDetailViewModel : ObservableObject, IRecipient<TagsC
 
         try
         {
-            if (files.Count == 0)
-            {
-                await Share.Default.RequestAsync(new ShareTextRequest
-                {
-                    Title = title,
-                    Text = text!
-                });
-                return;
-            }
-
-            if (files.Count == 1 && string.IsNullOrWhiteSpace(text))
-            {
-                await Share.Default.RequestAsync(new ShareFileRequest
-                {
-                    Title = title,
-                    File = files[0]
-                });
-                return;
-            }
-
-            if (!string.IsNullOrWhiteSpace(text))
-            {
-                var textPath = Path.Combine(Path.GetTempPath(), $"smcmanager-{Guid.NewGuid():N}.txt");
-                await File.WriteAllTextAsync(textPath, text);
-                files.Insert(0, new ShareFile(textPath));
-            }
-
-            await Share.Default.RequestAsync(new ShareMultipleFilesRequest
-            {
-                Title = title,
-                Files = files
-            });
+            var paths = files.Select(static file => file.FullPath).ToList();
+            await _mediaShare.ShareAsync(title, text, paths);
         }
         catch (Exception ex)
         {

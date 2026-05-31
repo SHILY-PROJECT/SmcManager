@@ -34,6 +34,16 @@
         <Setter Property="TextColor" Value="{DynamicResource TextSecondary}" />
     </Style>
 
+    <Style x:Key="PreviewIndicatorIconStyle" TargetType="Image">
+        <Setter Property="WidthRequest" Value="20" />
+        <Setter Property="HeightRequest" Value="20" />
+        <Setter Property="MaximumWidthRequest" Value="20" />
+        <Setter Property="MaximumHeightRequest" Value="20" />
+        <Setter Property="Aspect" Value="AspectFit" />
+        <Setter Property="HorizontalOptions" Value="Fill" />
+        <Setter Property="VerticalOptions" Value="Fill" />
+    </Style>
+
     <Style x:Key="CardBorderStyle" TargetType="Border">
         <Setter Property="BackgroundColor" Value="{DynamicResource BackgroundElevated}" />
         <Setter Property="Stroke" Value="{DynamicResource Divider}" />
