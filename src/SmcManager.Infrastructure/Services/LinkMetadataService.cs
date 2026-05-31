@@ -85,6 +85,32 @@ public sealed class LinkMetadataService : ILinkMetadataService
             var ytdlpResult = await _ytdlp.GetLinkMetadataAsync(
                 normalized, platform, socialAccountId, useSocialAccount, timeoutCts.Token).ConfigureAwait(false);
 
+            if (platform == SocialPlatform.Instagram
+                && string.IsNullOrWhiteSpace(ytdlpResult.Preview?.ThumbnailUrl))
+            {
+                var account = await _accountService.ResolveForDownloadAsync(
+                    platform,
+                    socialAccountId,
+                    useSocialAccount,
+                    timeoutCts.Token).ConfigureAwait(false);
+
+                var thumbnailUrl = await InstagramMediaApiFetcher.TryGetPreviewThumbnailUrlAsync(
+                    normalized, account, timeoutCts.Token).ConfigureAwait(false);
+
+                if (!string.IsNullOrWhiteSpace(thumbnailUrl))
+                {
+                    _logger.LogInformation(
+                        "GetMetadataAsync: Instagram thumbnail fallback via direct fetch: {Thumb}",
+                        thumbnailUrl);
+
+                    ytdlpResult = new LinkMetadataResult
+                    {
+                        Preview = MergeInstagramPreviewThumbnail(ytdlpResult.Preview, normalized, thumbnailUrl),
+                        Qualities = ytdlpResult.Qualities
+                    };
+                }
+            }
+
             _logger.LogInformation(
                 "GetMetadataAsync: done. HasPreview={HasPreview}, Title={Title}, Thumb={Thumb}, Qualities={QualityCount}",
                 ytdlpResult.Preview is not null,
@@ -99,5 +125,32 @@ public sealed class LinkMetadataService : ILinkMetadataService
             _logger.LogError(ex, "GetMetadataAsync failed for {Url}", normalized);
             throw;
         }
+    }
+
+    private static LinkPreviewInfo? MergeInstagramPreviewThumbnail(
+        LinkPreviewInfo? preview,
+        string normalizedUrl,
+        string thumbnailUrl)
+    {
+        if (preview is null)
+        {
+            return new LinkPreviewInfo
+            {
+                NormalizedUrl = normalizedUrl,
+                Platform = SocialPlatform.Instagram,
+                Title = "Instagram",
+                ThumbnailUrl = thumbnailUrl
+            };
+        }
+
+        return new LinkPreviewInfo
+        {
+            NormalizedUrl = preview.NormalizedUrl,
+            Platform = preview.Platform,
+            Title = preview.Title,
+            Author = preview.Author,
+            ThumbnailUrl = thumbnailUrl,
+            Description = preview.Description
+        };
     }
 }

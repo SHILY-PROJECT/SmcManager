@@ -282,6 +282,21 @@ public partial class ContentDetailViewModel : ObservableObject, IRecipient<TagsC
     /// <summary>Запрос смены слайда с экрана (обрабатывается ContentDetailPage).</summary>
     public event Action<int>? SlideNavigationRequested;
 
+    /// <summary>Видео подготовлено — страница может вызвать Play().</summary>
+    public event Action? VideoPrepareCompleted;
+
+    public bool IsVideoPlaybackRequested
+    {
+        get
+        {
+#if ANDROID
+            return _videoPlaybackRequested;
+#else
+            return false;
+#endif
+        }
+    }
+
     partial void OnCurrentSlideIndexChanged(int value)
     {
         UpdateSlideIndicator();
@@ -338,8 +353,10 @@ public partial class ContentDetailViewModel : ObservableObject, IRecipient<TagsC
 #if ANDROID
         _videoPlaybackRequested = true;
         NotifyVideoPlayPromptChanged();
-#endif
+        await PrepareCurrentSlideMediaAsync(forPlaybackRequest: true);
+#else
         await PrepareCurrentSlideMediaAsync();
+#endif
     }
 
     private void NotifyVideoPlayPromptChanged() => OnPropertyChanged(nameof(ShowVideoPlayPrompt));
@@ -833,12 +850,9 @@ public partial class ContentDetailViewModel : ObservableObject, IRecipient<TagsC
             {
                 ShowCurrentVideoPlayer = true;
                 var fullPath = Path.GetFullPath(slide.LocalPath);
-#if ANDROID
-                CurrentVideoSource = MediaSource.FromUri(new Uri(fullPath));
-#else
                 CurrentVideoSource = MediaSource.FromFile(fullPath);
-#endif
                 NotifyVideoPlayPromptChanged();
+                VideoPrepareCompleted?.Invoke();
                 return;
             }
 
@@ -864,7 +878,9 @@ public partial class ContentDetailViewModel : ObservableObject, IRecipient<TagsC
         NotifyVideoPlayPromptChanged();
     }
 
-    public async Task PrepareCurrentSlideMediaAsync()
+    public async Task PrepareCurrentSlideMediaAsync(
+        bool forPlaybackRequest = false,
+        bool forceSurfaceRefresh = false)
     {
         _mediaPrepareCts?.Cancel();
         var cts = new CancellationTokenSource();
@@ -876,17 +892,24 @@ public partial class ContentDetailViewModel : ObservableObject, IRecipient<TagsC
             if (cts.IsCancellationRequested)
                 return;
 
-            await MainThread.InvokeOnMainThreadAsync(() =>
+            var skipInitialReset = forPlaybackRequest
+                                   && !forceSurfaceRefresh
+                                   && GetCurrentSlide()?.IsVideo == true;
+            if (!skipInitialReset)
             {
-                ShowCurrentVideoPlayer = false;
-                CurrentVideoSource = null;
-            });
+                await MainThread.InvokeOnMainThreadAsync(() =>
+                {
+                    ShowCurrentVideoPlayer = false;
+                    CurrentVideoSource = null;
+                });
+            }
 
             if (MediaSlides.Count == 0)
                 return;
 
 #if ANDROID
-            await Task.Delay(450, cts.Token).ConfigureAwait(false);
+            if (!forPlaybackRequest)
+                await Task.Delay(450, cts.Token).ConfigureAwait(false);
 #endif
 
             var slide = GetCurrentSlide();

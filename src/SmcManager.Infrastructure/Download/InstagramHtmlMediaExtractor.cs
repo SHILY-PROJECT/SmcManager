@@ -13,9 +13,24 @@ internal static partial class InstagramHtmlMediaExtractor
     private static partial Regex CdnUrlRegex();
 
     [GeneratedRegex(
-        @"""(?:display_url|video_url|thumbnail_src|src)""\s*:\s*""(?<url>https://[^""\\]+)""",
+        @"https://[^\s""'<>\\]*(?:cdninstagram\.com|fbcdn\.net)[^\s""'<>\\]*",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    private static partial Regex InstagramCdnUrlRegex();
+
+    [GeneratedRegex(
+        @"""(?:display_url|video_url|thumbnail_src|thumbnail_url|image_url|preview_url|src)""\s*:\s*""(?<url>https://[^""\\]+)""",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex JsonMediaFieldRegex();
+
+    [GeneratedRegex(
+        @"property=""og:image""\s+content=""(?<url>https://[^""]+)""",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    private static partial Regex OgImagePropertyFirstRegex();
+
+    [GeneratedRegex(
+        @"content=""(?<url>https://[^""]+)""\s+property=""og:image""",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    private static partial Regex OgImageContentFirstRegex();
 
     [GeneratedRegex(@"(?<id>\d+_\d+_n)\.(?<ext>jpg|jpeg|webp|mp4)", RegexOptions.IgnoreCase)]
     private static partial Regex MediaIdRegex();
@@ -42,8 +57,87 @@ internal static partial class InstagramHtmlMediaExtractor
             TryAddCandidate(candidates, url, ref order);
         }
 
+        foreach (Match match in InstagramCdnUrlRegex().Matches(html))
+        {
+            var url = DecodeHtmlUrl(match.Value);
+            TryAddCandidate(candidates, url, ref order);
+        }
+
+        foreach (var url in ExtractOgImageUrls(html))
+            TryAddCandidate(candidates, url, ref order);
+
         return SelectBestDistinctUrls(candidates.Values.Select(x => x.Url));
     }
+
+    /// <summary>Лучший URL картинки для превью (фото-посты, обложка reel).</summary>
+    public static string? TryPickPreviewImageUrl(string? html)
+    {
+        if (string.IsNullOrWhiteSpace(html))
+            return null;
+
+        var candidates = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var url in FromHtml(html))
+            candidates.Add(url);
+
+        foreach (var url in ExtractOgImageUrls(html))
+            candidates.Add(url);
+
+        var best = candidates
+            .Where(u => !string.IsNullOrWhiteSpace(u))
+            .Where(IsPreviewImageUrl)
+            .OrderByDescending(ScoreMediaUrl)
+            .FirstOrDefault();
+
+        if (!string.IsNullOrWhiteSpace(best))
+            return best;
+
+        return ExtractOgImageUrls(html)
+            .Select(DecodeHtmlUrl)
+            .FirstOrDefault(u => !string.IsNullOrWhiteSpace(u) && IsPreviewImageUrl(u));
+    }
+
+    public static string? PickPreviewImageFromVideoData(VideoData? video)
+    {
+        if (video is null)
+            return null;
+
+        var urls = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        CollectFromNode(video, urls);
+
+        return urls
+            .Where(u => !IsVideoMediaUrl(u))
+            .Where(IsPreviewImageUrl)
+            .OrderByDescending(ScoreMediaUrl)
+            .FirstOrDefault();
+    }
+
+    internal static bool IsPreviewImageUrl(string url)
+    {
+        if (string.IsNullOrWhiteSpace(url) || IsVideoMediaUrl(url))
+            return false;
+
+        if (!IsInstagramCdnHost(url))
+            return false;
+
+        if (url.Contains("static.cdninstagram.com/rsrc.php", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        if (url.Contains("profile_pic", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        if (url.Contains("s150x150", StringComparison.OrdinalIgnoreCase)
+            || url.Contains("s320x320", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        return url.Contains("/v/", StringComparison.OrdinalIgnoreCase)
+               || url.Contains("stp=dst-", StringComparison.OrdinalIgnoreCase)
+               || HasMediaExtension(url);
+    }
+
+    internal static bool IsVideoMediaUrl(string url) =>
+        url.Contains(".mp4", StringComparison.OrdinalIgnoreCase)
+        || url.Contains("stp=dst-mp4", StringComparison.OrdinalIgnoreCase);
 
     public static IReadOnlyList<string> SelectBestDistinctUrls(IEnumerable<string> urls)
     {
@@ -54,7 +148,8 @@ internal static partial class InstagramHtmlMediaExtractor
             TryAddCandidate(candidates, url, ref order);
 
         return candidates.Values
-            .OrderBy(x => x.Order)
+            .OrderByDescending(x => x.Score)
+            .ThenBy(x => x.Order)
             .Select(x => x.Url)
             .ToList();
     }
@@ -164,13 +259,19 @@ internal static partial class InstagramHtmlMediaExtractor
             || url.Contains(".jpg", StringComparison.OrdinalIgnoreCase)
             || url.Contains(".jpeg", StringComparison.OrdinalIgnoreCase)
             || url.Contains(".webp", StringComparison.OrdinalIgnoreCase)
-            || url.Contains(".png", StringComparison.OrdinalIgnoreCase))
+            || url.Contains(".png", StringComparison.OrdinalIgnoreCase)
+            || url.Contains(".heic", StringComparison.OrdinalIgnoreCase))
             return true;
 
         return url.Contains("stp=dst-jpg", StringComparison.OrdinalIgnoreCase)
+               || url.Contains("stp=dst-jpeg", StringComparison.OrdinalIgnoreCase)
                || url.Contains("stp=dst-webp", StringComparison.OrdinalIgnoreCase)
+               || url.Contains("stp=dst-heic", StringComparison.OrdinalIgnoreCase)
                || url.Contains("stp=dst-mp4", StringComparison.OrdinalIgnoreCase)
-               || url.Contains("/v/t51.", StringComparison.OrdinalIgnoreCase);
+               || url.Contains("/v/t51.", StringComparison.OrdinalIgnoreCase)
+               || url.Contains("/v/t39.", StringComparison.OrdinalIgnoreCase)
+               || url.Contains("/v/t38.", StringComparison.OrdinalIgnoreCase)
+               || url.Contains("/v/t", StringComparison.OrdinalIgnoreCase);
     }
 
     private static string GetMediaKey(string url)
@@ -244,6 +345,19 @@ internal static partial class InstagramHtmlMediaExtractor
             return 0;
 
         return Math.Min(bestArea / 100, 2_000_000);
+    }
+
+    private static IEnumerable<string> ExtractOgImageUrls(string html)
+    {
+        foreach (var regex in new[] { OgImagePropertyFirstRegex(), OgImageContentFirstRegex() })
+        {
+            foreach (Match match in regex.Matches(html))
+            {
+                var url = DecodeHtmlUrl(match.Groups["url"].Value);
+                if (!string.IsNullOrWhiteSpace(url))
+                    yield return url;
+            }
+        }
     }
 
     private static string DecodeHtmlUrl(string url) =>

@@ -51,12 +51,33 @@ public sealed class RemoteImageCache
         if (File.Exists(cachePath) && new FileInfo(cachePath).Length >= MinCachedBytes)
             return cachePath;
 
+        var path = await TryDownloadToCacheAsync(uri, cachePath, options, useInstagramApiHeaders: true, cancellationToken)
+            .ConfigureAwait(false);
+        if (!string.IsNullOrWhiteSpace(path))
+            return path;
+
+        if (IsInstagramMediaUri(uri))
+        {
+            return await TryDownloadToCacheAsync(uri, cachePath, options, useInstagramApiHeaders: false, cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        return null;
+    }
+
+    private async Task<string?> TryDownloadToCacheAsync(
+        Uri uri,
+        string cachePath,
+        RemoteImageRequestOptions? options,
+        bool useInstagramApiHeaders,
+        CancellationToken cancellationToken)
+    {
         try
         {
             using var handler = new HttpClientHandler { AutomaticDecompression = System.Net.DecompressionMethods.All };
             using var client = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(30) };
             using var request = new HttpRequestMessage(HttpMethod.Get, uri);
-            ApplyRequestHeaders(request.Headers, uri, options);
+            ApplyRequestHeaders(request.Headers, uri, options, useInstagramApiHeaders);
 
             using var response = await client.SendAsync(request, cancellationToken).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
@@ -105,11 +126,23 @@ public sealed class RemoteImageCache
     private static void ApplyRequestHeaders(
         HttpRequestHeaders headers,
         Uri uri,
-        RemoteImageRequestOptions? options)
+        RemoteImageRequestOptions? options,
+        bool useInstagramApiHeaders)
     {
-        if (options?.UseInstagramHeaders == true || IsInstagramMediaUri(uri))
+        if (useInstagramApiHeaders
+            && options?.UseInstagramHeaders == true
+            && !string.IsNullOrWhiteSpace(options.CookieHeader))
         {
-            SocialAccountAuth.ApplyInstagramApiHeaders(headers, options?.CookieHeader ?? string.Empty);
+            SocialAccountAuth.ApplyInstagramApiHeaders(headers, options.CookieHeader);
+            return;
+        }
+
+        if (IsInstagramMediaUri(uri) || options?.UseInstagramHeaders == true)
+        {
+            headers.TryAddWithoutValidation("Referer", "https://www.instagram.com/");
+            headers.TryAddWithoutValidation(
+                "User-Agent",
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36");
             return;
         }
 

@@ -13,14 +13,19 @@ internal static class YtdlpThumbnailUrlPicker
         if (!string.IsNullOrWhiteSpace(video.Thumbnail))
             return video.Thumbnail.Trim();
 
-        if (video.Thumbnails is not { Length: > 0 })
-            return null;
+        if (video.Thumbnails is { Length: > 0 })
+        {
+            var fromThumbnails = video.Thumbnails
+                .Where(t => !string.IsNullOrWhiteSpace(t.Url))
+                .OrderByDescending(t => t.Width ?? 0)
+                .Select(t => t.Url!.Trim())
+                .FirstOrDefault();
 
-        return video.Thumbnails
-            .Where(t => !string.IsNullOrWhiteSpace(t.Url))
-            .OrderByDescending(t => t.Width ?? 0)
-            .Select(t => t.Url!.Trim())
-            .FirstOrDefault();
+            if (!string.IsNullOrWhiteSpace(fromThumbnails))
+                return fromThumbnails;
+        }
+
+        return InstagramHtmlMediaExtractor.PickPreviewImageFromVideoData(video);
     }
 
     private static VideoData? ResolvePrimary(VideoData? video)

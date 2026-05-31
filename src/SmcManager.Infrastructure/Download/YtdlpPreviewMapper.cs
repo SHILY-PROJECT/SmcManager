@@ -25,7 +25,10 @@ internal static class YtdlpPreviewMapper
         if (!string.IsNullOrWhiteSpace(author))
             author = author.TrimStart('@');
 
-        var thumb = FirstNonEmpty(video.Thumbnail, PickBestThumbnail(video.Thumbnails));
+        var thumb = FirstNonEmpty(
+            video.Thumbnail,
+            PickBestThumbnail(video.Thumbnails),
+            InstagramHtmlMediaExtractor.PickPreviewImageFromVideoData(video));
 
         return new LinkPreviewInfo
         {

@@ -19,7 +19,8 @@ namespace SmcManager.Maui.ViewModels;
 public partial class DownloadViewModel : ObservableObject,
     IRecipient<TagsChangedMessage>,
     IRecipient<TagSortChangedMessage>,
-    IRecipient<ContentDeletedMessage>
+    IRecipient<ContentDeletedMessage>,
+    IRecipient<ShareUrlReceivedMessage>
 {
     private readonly IDownloadOrchestrator _orchestrator;
     private readonly ILinkMetadataService _linkMetadata;
@@ -75,6 +76,7 @@ public partial class DownloadViewModel : ObservableObject,
 
         WeakReferenceMessenger.Default.Register<TagsChangedMessage>(this);
         WeakReferenceMessenger.Default.Register<ContentDeletedMessage>(this);
+        WeakReferenceMessenger.Default.Register<ShareUrlReceivedMessage>(this);
     }
 
     public void ActivateMessaging()
@@ -95,8 +97,14 @@ public partial class DownloadViewModel : ObservableObject,
         WeakReferenceMessenger.Default.Unregister<TagSortChangedMessage>(this);
     }
 
-    public async Task ApplyIncomingShareUrlAsync(string url)
+    public async Task ApplyIncomingShareUrlAsync(string url, bool force = false)
     {
+        if (string.IsNullOrWhiteSpace(url))
+            return;
+
+        if (force)
+            ResetShareUrlApplyGuard();
+
         if (!TryBeginShareUrlApply(url))
             return;
 
@@ -424,6 +432,12 @@ public partial class DownloadViewModel : ObservableObject,
         return true;
     }
 
+    private void ResetShareUrlApplyGuard()
+    {
+        _lastShareUrlApplied = null;
+        _lastShareAppliedTick = 0;
+    }
+
     private void BeginLinkMetadataLoading()
     {
         MainThread.BeginInvokeOnMainThread(() =>
@@ -451,6 +465,9 @@ public partial class DownloadViewModel : ObservableObject,
 
     public void Receive(ContentDeletedMessage message) =>
         _ = MainThread.InvokeOnMainThreadAsync(RefreshRecentAsync);
+
+    public void Receive(ShareUrlReceivedMessage message) =>
+        _ = ApplyIncomingShareUrlAsync(message.Url, force: true);
 
     [RelayCommand]
     private async Task DeleteRecentItemAsync(ContentItemDisplayModel item)
@@ -1106,10 +1123,11 @@ public partial class DownloadViewModel : ObservableObject,
         if (string.IsNullOrWhiteSpace(pending))
             return;
 
-        await _settings.SetPendingShareUrlAsync(null);
+        ResetShareUrlApplyGuard();
         if (!TryBeginShareUrlApply(pending))
             return;
 
+        await _settings.SetPendingShareUrlAsync(null);
         ContentNavigationHelper.BeginShareSession();
         SetUrl(CleanUrlForDisplay(pending));
     }

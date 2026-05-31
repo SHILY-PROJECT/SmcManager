@@ -20,7 +20,8 @@ namespace SmcManager.Maui;
 public class MainActivity : MauiAppCompatActivity
 {
     private string? _deferredShareText;
-    private static string? _lastHandledShareUrl;
+    private string? _lastProcessedShareText;
+    private long _lastProcessedShareAt;
     private bool _isResumed;
 
     protected override void OnCreate(Bundle? savedInstanceState)
@@ -85,20 +86,24 @@ public class MainActivity : MauiAppCompatActivity
             return;
         }
 
-        if (string.Equals(_lastHandledShareUrl, normalized, StringComparison.OrdinalIgnoreCase))
+        var now = System.Environment.TickCount64;
+        if (string.Equals(_lastProcessedShareText, text, StringComparison.Ordinal)
+            && now - _lastProcessedShareAt < 1000)
         {
             ClearShareIntent();
             return;
         }
 
-        _lastHandledShareUrl = normalized;
+        _lastProcessedShareText = text;
+        _lastProcessedShareAt = now;
+
         ContentNavigationHelper.BeginShareSession();
         Preferences.Default.Set(MauiSettingsService.PendingShareUrlPreferenceKey, normalized);
         ClearShareIntent();
 
         var shareService = ResolveShareService();
         if (shareService is not null)
-            _ = shareService.ProcessPendingAsync();
+            _ = shareService.OnShareUrlReceivedAsync(normalized);
     }
 
     private void ClearShareIntent()

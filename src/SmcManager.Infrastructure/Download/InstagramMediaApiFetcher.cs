@@ -46,6 +46,11 @@ internal static class InstagramMediaApiFetcher
         SocialAccount? account,
         CancellationToken cancellationToken)
     {
+        var fromOembed = await InstagramOEmbedFetcher.TryGetThumbnailUrlAsync(
+            postUrl, cancellationToken).ConfigureAwait(false);
+        if (!string.IsNullOrWhiteSpace(fromOembed))
+            return fromOembed;
+
         var json = await TryFetchMediaInfoJsonAsync(postUrl, account, cancellationToken).ConfigureAwait(false);
         var fromApi = ExtractPreviewThumbnailFromApiJson(json);
         if (!string.IsNullOrWhiteSpace(fromApi))
@@ -58,8 +63,7 @@ internal static class InstagramMediaApiFetcher
             if (string.IsNullOrWhiteSpace(html))
                 continue;
 
-            var url = InstagramHtmlMediaExtractor.FromHtml(html)
-                .FirstOrDefault(u => !IsVideoMediaUrl(u));
+            var url = InstagramHtmlMediaExtractor.TryPickPreviewImageUrl(html);
             if (!string.IsNullOrWhiteSpace(url))
                 return url;
         }
@@ -97,8 +101,7 @@ internal static class InstagramMediaApiFetcher
     }
 
     internal static bool IsVideoMediaUrl(string url) =>
-        url.Contains(".mp4", StringComparison.OrdinalIgnoreCase)
-        || url.Contains("stp=dst-mp4", StringComparison.OrdinalIgnoreCase);
+        InstagramHtmlMediaExtractor.IsVideoMediaUrl(url);
 
     internal static HttpClient CreateHttpClient(SocialAccount? account)
     {
@@ -362,7 +365,7 @@ internal static class InstagramMediaApiFetcher
                     continue;
 
                 var url = urlProp.GetString();
-                if (string.IsNullOrWhiteSpace(url) || !InstagramHtmlMediaExtractor.IsPostMediaUrl(url))
+                if (string.IsNullOrWhiteSpace(url) || !InstagramHtmlMediaExtractor.IsPreviewImageUrl(url))
                     continue;
 
                 var score = InstagramHtmlMediaExtractor.ScoreImageCandidate(candidate, url);
@@ -383,7 +386,7 @@ internal static class InstagramMediaApiFetcher
                 continue;
 
             var url = prop.GetString();
-            if (!string.IsNullOrWhiteSpace(url) && InstagramHtmlMediaExtractor.IsPostMediaUrl(url))
+            if (!string.IsNullOrWhiteSpace(url) && InstagramHtmlMediaExtractor.IsPreviewImageUrl(url))
                 return url.Trim();
         }
 
