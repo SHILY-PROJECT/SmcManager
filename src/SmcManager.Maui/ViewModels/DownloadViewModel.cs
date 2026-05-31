@@ -68,7 +68,6 @@ public partial class DownloadViewModel : ObservableObject,
 
         WeakReferenceMessenger.Default.Register<TagsChangedMessage>(this);
         WeakReferenceMessenger.Default.Register<ContentDeletedMessage>(this);
-        WeakReferenceMessenger.Default.Register<ShareUrlReceivedMessage>(this);
     }
 
     public void ActivateMessaging()
@@ -78,6 +77,7 @@ public partial class DownloadViewModel : ObservableObject,
 
         _messagingActive = true;
         WeakReferenceMessenger.Default.Register<TagSortChangedMessage>(this);
+        WeakReferenceMessenger.Default.Register<ShareUrlReceivedMessage>(this);
     }
 
     public void DeactivateMessaging()
@@ -87,6 +87,7 @@ public partial class DownloadViewModel : ObservableObject,
 
         _messagingActive = false;
         WeakReferenceMessenger.Default.Unregister<TagSortChangedMessage>(this);
+        WeakReferenceMessenger.Default.Unregister<ShareUrlReceivedMessage>(this);
     }
 
     public async Task ApplyIncomingShareUrlAsync(string url, bool force = false)
@@ -642,12 +643,38 @@ public partial class DownloadViewModel : ObservableObject,
         if (string.IsNullOrWhiteSpace(url))
             return;
 
-        var fetchOptions = await BuildPreviewImageFetchOptionsAsync(item, ct).ConfigureAwait(false);
-        var path = await _remoteImageCache.GetCachedFilePathAsync(url, fetchOptions, ct).ConfigureAwait(false);
+        var path = await TryCachePreviewImageAsync(item, url, ct).ConfigureAwait(false);
+        if (string.IsNullOrWhiteSpace(path)
+            && item.Platform == SocialPlatform.Instagram
+            && !ct.IsCancellationRequested
+            && PendingLinkPreviews.Contains(item))
+        {
+            var (useAccount, accountId) = ResolveDownloadAccountSelection(item);
+            var metadata = await _linkMetadata.GetMetadataAsync(
+                item.Url, accountId, useAccount, ct).ConfigureAwait(false);
+
+            var refreshedUrl = metadata.Preview?.ThumbnailUrl;
+            if (!string.IsNullOrWhiteSpace(refreshedUrl)
+                && !string.Equals(refreshedUrl, url, StringComparison.OrdinalIgnoreCase))
+            {
+                await MainThread.InvokeOnMainThreadAsync(() => item.PreviewThumbnail = refreshedUrl);
+                path = await TryCachePreviewImageAsync(item, refreshedUrl, ct).ConfigureAwait(false);
+            }
+        }
+
         if (ct.IsCancellationRequested || !PendingLinkPreviews.Contains(item))
             return;
 
         await MainThread.InvokeOnMainThreadAsync(() => item.PreviewImageFile = path);
+    }
+
+    private async Task<string?> TryCachePreviewImageAsync(
+        LinkPreviewItemViewModel item,
+        string url,
+        CancellationToken ct)
+    {
+        var fetchOptions = await BuildPreviewImageFetchOptionsAsync(item, ct).ConfigureAwait(false);
+        return await _remoteImageCache.GetCachedFilePathAsync(url, fetchOptions, ct).ConfigureAwait(false);
     }
 
     private async Task<RemoteImageRequestOptions?> BuildPreviewImageFetchOptionsAsync(

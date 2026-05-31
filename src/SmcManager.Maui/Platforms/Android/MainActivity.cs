@@ -52,6 +52,27 @@ public class MainActivity : MauiAppCompatActivity
         base.OnResume();
         _isResumed = true;
         ProcessDeferredShareText();
+        SchedulePendingShareRetry();
+    }
+
+    private void SchedulePendingShareRetry()
+    {
+        MainThread.BeginInvokeOnMainThread(async () =>
+        {
+            for (var attempt = 0; attempt < 12; attempt++)
+            {
+                await Task.Delay(200);
+                var pending = Preferences.Default.Get(MauiSettingsService.PendingShareUrlPreferenceKey, null as string);
+                if (string.IsNullOrWhiteSpace(pending))
+                    return;
+
+                var svc = ResolveShareService();
+                if (svc is null)
+                    continue;
+
+                await svc.ProcessPendingAsync();
+            }
+        });
     }
 
     protected override void OnPause()
@@ -103,7 +124,18 @@ public class MainActivity : MauiAppCompatActivity
 
         var shareService = ResolveShareService();
         if (shareService is not null)
+        {
             _ = shareService.OnShareUrlReceivedAsync(normalized);
+            return;
+        }
+
+        MainThread.BeginInvokeOnMainThread(async () =>
+        {
+            await Task.Delay(250);
+            var svc = ResolveShareService();
+            if (svc is not null)
+                await svc.ProcessPendingAsync();
+        });
     }
 
     private void ClearShareIntent()

@@ -46,11 +46,6 @@ internal static class InstagramMediaApiFetcher
         SocialAccount? account,
         CancellationToken cancellationToken)
     {
-        var fromOembed = await InstagramOEmbedFetcher.TryGetThumbnailUrlAsync(
-            postUrl, cancellationToken).ConfigureAwait(false);
-        if (!string.IsNullOrWhiteSpace(fromOembed))
-            return fromOembed;
-
         var json = await TryFetchMediaInfoJsonAsync(postUrl, account, cancellationToken).ConfigureAwait(false);
         var fromApi = ExtractPreviewThumbnailFromApiJson(json);
         if (!string.IsNullOrWhiteSpace(fromApi))
@@ -68,7 +63,8 @@ internal static class InstagramMediaApiFetcher
                 return url;
         }
 
-        return null;
+        return await InstagramOEmbedFetcher.TryGetThumbnailUrlAsync(postUrl, cancellationToken)
+            .ConfigureAwait(false);
     }
 
     internal static async Task<string?> TryFetchHtmlAsync(

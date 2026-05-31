@@ -86,7 +86,7 @@ public sealed class LinkMetadataService : ILinkMetadataService
                 normalized, platform, socialAccountId, useSocialAccount, timeoutCts.Token).ConfigureAwait(false);
 
             if (platform == SocialPlatform.Instagram
-                && string.IsNullOrWhiteSpace(ytdlpResult.Preview?.ThumbnailUrl))
+                && NeedsInstagramPreviewThumbnailFallback(ytdlpResult.Preview?.ThumbnailUrl))
             {
                 var account = await _accountService.ResolveForDownloadAsync(
                     platform,
@@ -126,6 +126,10 @@ public sealed class LinkMetadataService : ILinkMetadataService
             throw;
         }
     }
+
+    private static bool NeedsInstagramPreviewThumbnailFallback(string? thumbnailUrl) =>
+        string.IsNullOrWhiteSpace(thumbnailUrl)
+        || !InstagramHtmlMediaExtractor.IsPreviewImageUrl(thumbnailUrl);
 
     private static LinkPreviewInfo? MergeInstagramPreviewThumbnail(
         LinkPreviewInfo? preview,

@@ -14,6 +14,8 @@ internal static class ContentNavigationHelper
 
     public static void BeginShareSession() => Interlocked.Exchange(ref _shareSessionActive, 1);
 
+    public static void EndShareSession() => Interlocked.Exchange(ref _shareSessionActive, 0);
+
     public static Task OpenDetailAsync(int contentId)
     {
         if (contentId <= 0)
@@ -101,6 +103,4 @@ internal static class ContentNavigationHelper
             return false;
         }
     }
-
-    private static void EndShareSession() => Interlocked.Exchange(ref _shareSessionActive, 0);
 }

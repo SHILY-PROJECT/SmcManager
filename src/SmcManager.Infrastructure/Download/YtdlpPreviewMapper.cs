@@ -25,10 +25,7 @@ internal static class YtdlpPreviewMapper
         if (!string.IsNullOrWhiteSpace(author))
             author = author.TrimStart('@');
 
-        var thumb = FirstNonEmpty(
-            video.Thumbnail,
-            PickBestThumbnail(video.Thumbnails),
-            InstagramHtmlMediaExtractor.PickPreviewImageFromVideoData(video));
+        var thumb = PickValidatedPreviewThumbnail(video);
 
         return new LinkPreviewInfo
         {
@@ -49,6 +46,36 @@ internal static class YtdlpPreviewMapper
 
         return video.Entries.FirstOrDefault(e => !string.IsNullOrEmpty(e.Thumbnail) || !string.IsNullOrEmpty(e.Url))
                ?? video.Entries[0];
+    }
+
+    private static string? PickValidatedPreviewThumbnail(VideoData? video)
+    {
+        if (video is null)
+            return null;
+
+        foreach (var candidate in EnumerateThumbnailCandidates(video))
+        {
+            if (!string.IsNullOrWhiteSpace(candidate)
+                && InstagramHtmlMediaExtractor.IsPreviewImageUrl(candidate))
+                return candidate.Trim();
+        }
+
+        return InstagramHtmlMediaExtractor.PickPreviewImageFromVideoData(video);
+    }
+
+    private static IEnumerable<string?> EnumerateThumbnailCandidates(VideoData video)
+    {
+        yield return video.Thumbnail;
+        yield return PickBestThumbnail(video.Thumbnails);
+
+        if (video.Entries is not { Length: > 0 })
+            yield break;
+
+        foreach (var entry in video.Entries)
+        {
+            yield return entry.Thumbnail;
+            yield return PickBestThumbnail(entry.Thumbnails);
+        }
     }
 
     private static string? PickBestThumbnail(ThumbnailData[]? thumbnails)

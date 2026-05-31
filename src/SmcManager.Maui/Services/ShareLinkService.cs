@@ -1,8 +1,6 @@
 using System.Text.RegularExpressions;
-using CommunityToolkit.Mvvm.Messaging;
-using SmcManager.Core.Services;
 using SmcManager.Core.Interfaces;
-using SmcManager.Maui.Messages;
+using SmcManager.Core.Services;
 using SmcManager.Maui.ViewModels;
 using SmcManager.Maui.Views;
 
@@ -41,6 +39,7 @@ public class ShareLinkService
         _lastIncomingShareAt = Environment.TickCount64;
         _inFlightShareUrl = null;
 
+        ContentNavigationHelper.EndShareSession();
         ContentNavigationHelper.BeginShareSession();
         await _settings.SetPendingShareUrlAsync(normalized).ConfigureAwait(false);
         await ProcessPendingAsync().ConfigureAwait(false);
@@ -84,10 +83,14 @@ public class ShareLinkService
             if (string.Equals(_inFlightShareUrl, pending, StringComparison.OrdinalIgnoreCase))
                 return;
 
-            await WaitForDownloadPageAsync().ConfigureAwait(false);
+            if (!IsDownloadRootVisible(Shell.Current))
+                await NavigateToDownloadTabAsync().ConfigureAwait(false);
 
-            await MainThread.InvokeOnMainThreadAsync(() =>
-                WeakReferenceMessenger.Default.Send(new ShareUrlReceivedMessage(pending)));
+            if (!IsDownloadRootVisible(Shell.Current))
+            {
+                await _settings.SetPendingShareUrlAsync(pending).ConfigureAwait(false);
+                return;
+            }
 
             for (var attempt = 0; attempt < 80; attempt++)
             {
@@ -95,10 +98,11 @@ public class ShareLinkService
                 if (string.IsNullOrWhiteSpace(pendingAfterMessage))
                     return;
 
-                if (TryGetDownloadViewModel(out var vm))
+                if (TryGetVisibleDownloadViewModel(out var vm))
                 {
                     _inFlightShareUrl = pendingAfterMessage;
                     await vm.ApplyIncomingShareUrlAsync(pendingAfterMessage, force: true).ConfigureAwait(false);
+                    ContentNavigationHelper.EndShareSession();
                     _ = ClearInFlightShareLaterAsync(pendingAfterMessage);
                     return;
                 }
@@ -175,55 +179,98 @@ public class ShareLinkService
             if (Shell.Current is not Shell shell)
                 return;
 
-            shell.FlyoutIsPresented = false;
+            await ResetNavigationForShareAsync(shell).ConfigureAwait(true);
+            ShellNavigationHistory.ResetToRoute("download");
 
-            while (shell.Navigation.ModalStack.Count > 0)
-                await shell.Navigation.PopModalAsync(animated: false);
+            for (var attempt = 0; attempt < 8; attempt++)
+            {
+                try
+                {
+                    await shell.GoToAsync("//download", animate: false).ConfigureAwait(true);
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Share GoToAsync //download failed: {ex.Message}");
+                }
 
-            if (!ShouldNavigateToDownloadRoot(shell))
-                return;
+                if (IsDownloadRootVisible(shell))
+                    return;
 
-            ShellNavigationHistory.RecordFlyoutNavigation("download");
-            await shell.GoToAsync("//download", animate: false);
-        });
+                await PopShellRouteAsync(shell).ConfigureAwait(true);
+                await Task.Delay(80).ConfigureAwait(true);
+            }
+        }).ConfigureAwait(true);
 
         await WaitForDownloadPageAsync().ConfigureAwait(false);
     }
 
-    private static bool ShouldNavigateToDownloadRoot(Shell shell)
+    private static async Task ResetNavigationForShareAsync(Shell shell)
     {
-        if (shell.CurrentPage is not DownloadPage)
-            return true;
+        shell.FlyoutIsPresented = false;
+
+        while (shell.Navigation.ModalStack.Count > 0)
+            await shell.Navigation.PopModalAsync(animated: false).ConfigureAwait(true);
+
+        for (var i = 0; i < 12; i++)
+        {
+            if (IsFlyoutRootPage(shell.CurrentPage))
+                break;
+
+            await PopShellRouteAsync(shell).ConfigureAwait(true);
+        }
+
+        while (shell.Navigation.NavigationStack.Count > 1)
+            await shell.Navigation.PopAsync(animated: false).ConfigureAwait(true);
+    }
+
+    private static async Task PopShellRouteAsync(Shell shell)
+    {
+        try
+        {
+            await shell.GoToAsync("..", animate: false).ConfigureAwait(true);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Share GoToAsync .. failed: {ex.Message}");
+        }
+    }
+
+    private static bool IsFlyoutRootPage(Page? page) =>
+        page is DownloadPage or LibraryPage or GroupsPage or TagsPage;
+
+    private static bool IsDownloadRootVisible(Shell? shell)
+    {
+        if (shell?.CurrentPage is not DownloadPage)
+            return false;
 
         var location = shell.CurrentState?.Location?.OriginalString ?? string.Empty;
-        return location.Contains(nameof(ContentDetailPage), StringComparison.OrdinalIgnoreCase);
+        if (!location.Contains("download", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        return !location.Contains(nameof(ContentDetailPage), StringComparison.OrdinalIgnoreCase)
+               && !location.Contains(nameof(SettingsPage), StringComparison.OrdinalIgnoreCase);
     }
 
     private static async Task WaitForDownloadPageAsync()
     {
-        for (var attempt = 0; attempt < 100; attempt++)
+        for (var attempt = 0; attempt < 120; attempt++)
         {
-            if (Shell.Current?.CurrentPage is DownloadPage)
+            if (IsDownloadRootVisible(Shell.Current))
                 return;
 
             await Task.Delay(50).ConfigureAwait(false);
         }
     }
 
-    private static bool TryGetDownloadViewModel(out DownloadViewModel viewModel)
+    private static bool TryGetVisibleDownloadViewModel(out DownloadViewModel viewModel)
     {
         viewModel = null!;
 
         if (Shell.Current?.CurrentPage is DownloadPage downloadPage
-            && downloadPage.BindingContext is DownloadViewModel pageViewModel)
+            && downloadPage.BindingContext is DownloadViewModel pageViewModel
+            && IsDownloadRootVisible(Shell.Current))
         {
             viewModel = pageViewModel;
-            return true;
-        }
-
-        if (Shell.Current?.CurrentPage?.BindingContext is DownloadViewModel currentViewModel)
-        {
-            viewModel = currentViewModel;
             return true;
         }
 

@@ -625,7 +625,9 @@ public partial class ContentDetailViewModel : ObservableObject, IRecipient<TagsC
         if (_content is null)
             return;
 
-        var text = ContentShareHelper.BuildShareText(_content.Caption, _content.UserComment);
+        var caption = IsEditingCaption ? CaptionDraft : Caption;
+        var comment = IsEditingComment ? CommentDraft : UserComment;
+        var text = ContentShareHelper.BuildShareText(caption, comment);
         var files = CollectShareableFiles();
         if (files.Count == 0 && string.IsNullOrWhiteSpace(text))
         {

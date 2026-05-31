@@ -92,9 +92,29 @@ internal static partial class InstagramHtmlMediaExtractor
         if (!string.IsNullOrWhiteSpace(best))
             return best;
 
-        return ExtractOgImageUrls(html)
+        var fromOg = ExtractOgImageUrls(html)
             .Select(DecodeHtmlUrl)
             .FirstOrDefault(u => !string.IsNullOrWhiteSpace(u) && IsPreviewImageUrl(u));
+        if (!string.IsNullOrWhiteSpace(fromOg))
+            return fromOg;
+
+        return ExtractOgImageUrls(html)
+            .Select(DecodeHtmlUrl)
+            .FirstOrDefault(IsOgPreviewCandidate);
+    }
+
+    internal static bool IsOgPreviewCandidate(string url)
+    {
+        if (string.IsNullOrWhiteSpace(url) || IsVideoMediaUrl(url))
+            return false;
+
+        if (!IsInstagramCdnHost(url))
+            return false;
+
+        if (url.Contains("static.cdninstagram.com/rsrc.php", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        return !url.Contains("profile_pic", StringComparison.OrdinalIgnoreCase);
     }
 
     public static string? PickPreviewImageFromVideoData(VideoData? video)
