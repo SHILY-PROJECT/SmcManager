@@ -15,19 +15,13 @@
         </DataTemplate>
     </ContentView.Resources>
     <Grid ColumnDefinitions="16,*,16">
-        <SwipeView x:Name="CardSwipeView"
-                   Grid.Column="1"
-                   IsEnabled="{Binding IsSwipeEnabled, Source={x:Reference Root}}">
-        <SwipeView.RightItems>
-            <SwipeItems Mode="Reveal">
-                <SwipeItem Text="Удалить"
-                           BackgroundColor="{StaticResource Danger}"
-                           Command="{Binding DeleteCommand, Source={x:Reference Root}}"
-                           CommandParameter="{Binding Item, Source={x:Reference Root}}" />
-            </SwipeItems>
-        </SwipeView.RightItems>
-        <Border Style="{StaticResource CardBorderStyle}"
+        <Border x:Name="CardBorder"
+                Grid.Column="1"
+                Style="{StaticResource CardBorderStyle}"
                 Padding="12,15,12,15">
+            <Border.GestureRecognizers>
+                <TapGestureRecognizer Tapped="OnCardTapped" />
+            </Border.GestureRecognizers>
             <Grid Padding="4">
                 <Grid ColumnDefinitions="95,*" ColumnSpacing="14">
                     <Border WidthRequest="87"
@@ -94,18 +88,7 @@
                            InputTransparent="True"
                            SemanticProperties.Description="Соцсеть" />
                 </HorizontalStackLayout>
-                <Button x:Name="OpenButton"
-                        BackgroundColor="Transparent"
-                        BorderWidth="0"
-                        Padding="0"
-                        Margin="0"
-                        HorizontalOptions="Fill"
-                        VerticalOptions="Fill"
-                        IsVisible="{Binding IsNavigationEnabled, Source={x:Reference Root}}"
-                        Clicked="OnCardClicked"
-                        SemanticProperties.Description="Открыть контент" />
             </Grid>
         </Border>
-        </SwipeView>
     </Grid>
 </ContentView>

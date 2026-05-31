@@ -625,7 +625,7 @@ public partial class ContentDetailViewModel : ObservableObject, IRecipient<TagsC
         if (_content is null)
             return;
 
-        var text = BuildShareText(_content.Caption, _content.UserComment);
+        var text = ContentShareHelper.BuildShareText(_content.Caption, _content.UserComment);
         var files = CollectShareableFiles();
         if (files.Count == 0 && string.IsNullOrWhiteSpace(text))
         {
@@ -657,17 +657,6 @@ public partial class ContentDetailViewModel : ObservableObject, IRecipient<TagsC
         }
 
         return files;
-    }
-
-    private static string? BuildShareText(string? caption, string? userComment)
-    {
-        var parts = new List<string>();
-        if (!string.IsNullOrWhiteSpace(caption))
-            parts.Add(caption.Trim());
-        if (!string.IsNullOrWhiteSpace(userComment))
-            parts.Add(userComment.Trim());
-
-        return parts.Count > 0 ? string.Join("\n\n", parts) : null;
     }
 
     [RelayCommand]

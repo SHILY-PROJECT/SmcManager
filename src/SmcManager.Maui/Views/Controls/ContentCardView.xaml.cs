@@ -1,4 +1,11 @@
 using System.Windows.Input;
+using CommunityToolkit.Maui;
+using CommunityToolkit.Maui.Behaviors;
+using CommunityToolkit.Maui.Extensions;
+using CommunityToolkit.Mvvm.Messaging;
+using Microsoft.Maui.Controls.Shapes;
+using SmcManager.Core.Interfaces;
+using SmcManager.Maui.Messages;
 using SmcManager.Maui.Services;
 using SmcManager.Maui.ViewModels;
 
@@ -6,6 +13,8 @@ namespace SmcManager.Maui.Views.Controls;
 
 /// <summary>
 /// Карточка скачанного контента для списков.
+/// Android: долгое нажатие — поделиться / удалить.
+/// Windows: контекстное меню по ПКМ — поделиться / удалить.
 /// </summary>
 public partial class ContentCardView : ContentView
 {
@@ -24,6 +33,8 @@ public partial class ContentCardView : ContentView
 
     public static readonly BindableProperty IsSwipeEnabledProperty = BindableProperty.Create(
         nameof(IsSwipeEnabled), typeof(bool), typeof(ContentCardView), true);
+
+    private TouchBehavior? _androidLongPressBehavior;
 
     public bool IsNavigationEnabled
     {
@@ -68,7 +79,25 @@ public partial class ContentCardView : ContentView
     public IReadOnlyList<ContentTagDisplayModel> Tags { get; private set; } = [];
     public bool HasTags { get; private set; }
 
-    public ContentCardView() => InitializeComponent();
+    public ContentCardView()
+    {
+        InitializeComponent();
+        InitPlatformInteractions();
+    }
+
+    partial void InitPlatformInteractions();
+
+    private void SetupAndroidLongPress()
+    {
+        if (_androidLongPressBehavior is not null)
+            CardBorder.Behaviors.Remove(_androidLongPressBehavior);
+
+        _androidLongPressBehavior = new TouchBehavior
+        {
+            LongPressCommand = new Command(async () => await ShowContextActionsAsync().ConfigureAwait(false))
+        };
+        CardBorder.Behaviors.Add(_androidLongPressBehavior);
+    }
 
     private static void OnItemChanged(BindableObject bindable, object oldValue, object newValue)
     {
@@ -101,7 +130,7 @@ public partial class ContentCardView : ContentView
 
     private bool _isNavigating;
 
-    private async void OnCardClicked(object? sender, EventArgs e)
+    private async void OnCardTapped(object? sender, EventArgs e)
     {
         if (!IsNavigationEnabled || Item is null || _isNavigating)
             return;
@@ -109,6 +138,12 @@ public partial class ContentCardView : ContentView
         _isNavigating = true;
         try
         {
+            if (OpenCommand?.CanExecute(Item) == true)
+            {
+                OpenCommand.Execute(Item);
+                return;
+            }
+
             if (Shell.Current?.CurrentPage is Page page)
                 page.Unfocus();
 
@@ -119,4 +154,87 @@ public partial class ContentCardView : ContentView
             _isNavigating = false;
         }
     }
+
+    private async Task ShowContextActionsAsync()
+    {
+        if (Item is null)
+            return;
+
+        var page = GetHostPage();
+        if (page is null)
+            return;
+
+        var menu = new ContentCardContextMenuView();
+        menu.AttachToPage(page);
+
+        var options = new PopupOptions
+        {
+            CanBeDismissedByTappingOutsideOfPopup = true,
+            PageOverlayColor = Color.FromArgb("#66000000"),
+            Shape = new RoundRectangle
+            {
+                CornerRadius = 0,
+                StrokeThickness = 0,
+                Fill = new SolidColorBrush(Colors.Transparent),
+                Stroke = new SolidColorBrush(Colors.Transparent)
+            },
+            Shadow = null
+        };
+
+        var popupResult = await page
+            .ShowPopupAsync<ContentCardContextAction>(menu, options)
+            .ConfigureAwait(true);
+
+        if (popupResult.WasDismissedByTappingOutsideOfPopup)
+            return;
+
+        if (popupResult.Result == ContentCardContextAction.Share)
+            await ShareItemAsync().ConfigureAwait(false);
+        else if (popupResult.Result == ContentCardContextAction.Delete)
+            await DeleteItemAsync().ConfigureAwait(false);
+    }
+
+    private async Task ShareItemAsync()
+    {
+        if (Item is null)
+            return;
+
+        var repository = ResolveService<IContentRepository>();
+        var mediaShare = ResolveService<IMediaShareService>();
+        var toast = ResolveService<BottomToastService>();
+        if (repository is null || mediaShare is null || toast is null)
+            return;
+
+        await ContentShareHelper.ShareContentAsync(repository, mediaShare, toast, Item.Id)
+            .ConfigureAwait(false);
+    }
+
+    private async Task DeleteItemAsync()
+    {
+        if (Item is null)
+            return;
+
+        if (DeleteCommand?.CanExecute(Item) == true)
+        {
+            DeleteCommand.Execute(Item);
+            return;
+        }
+
+        var repository = ResolveService<IContentRepository>();
+        if (repository is null)
+            return;
+
+        if (!await ContentDeletionHelper.ConfirmAndDeleteAsync(repository, Item).ConfigureAwait(false))
+            return;
+
+        WeakReferenceMessenger.Default.Send(new ContentDeletedMessage());
+    }
+
+    private Page? GetHostPage() =>
+        Window?.Page
+        ?? Shell.Current?.CurrentPage
+        ?? Application.Current?.Windows.FirstOrDefault()?.Page;
+
+    private static T? ResolveService<T>() where T : class =>
+        IPlatformApplication.Current?.Services?.GetService<T>();
 }
