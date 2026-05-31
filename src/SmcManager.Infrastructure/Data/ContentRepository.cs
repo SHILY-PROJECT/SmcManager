@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using SmcManager.Core.Enums;
 using SmcManager.Core.Interfaces;
 using SmcManager.Core.Models;
 using SmcManager.Core.Services;
@@ -499,17 +500,60 @@ public class ContentRepository : IContentRepository
         _db.ContentItems.CountAsync(c => c.Tags.Any(t => t.Id == tagId), cancellationToken);
 
     public async Task<IReadOnlyList<SocialAccount>> GetAccountsAsync(CancellationToken cancellationToken = default) =>
-        await _db.SocialAccounts.OrderBy(a => a.Platform).ThenBy(a => a.Username)
+        await _db.SocialAccounts
+            .AsNoTracking()
+            .OrderBy(a => a.Platform)
+            .ThenBy(a => a.Username)
             .ToListAsync(cancellationToken);
+
+    public Task<SocialAccount?> GetAccountByIdAsync(int id, CancellationToken cancellationToken = default) =>
+        _db.SocialAccounts
+            .AsNoTracking()
+            .FirstOrDefaultAsync(a => a.Id == id, cancellationToken);
 
     public async Task<SocialAccount> SaveAccountAsync(SocialAccount account, CancellationToken cancellationToken = default)
     {
         if (account.Id == 0)
+        {
             _db.SocialAccounts.Add(account);
+        }
         else
-            _db.SocialAccounts.Update(account);
+        {
+            var existing = await _db.SocialAccounts.FindAsync([account.Id], cancellationToken);
+            if (existing is null)
+            {
+                _db.SocialAccounts.Add(account);
+            }
+            else
+            {
+                _db.Entry(existing).CurrentValues.SetValues(account);
+                account = existing;
+            }
+        }
+
         await _db.SaveChangesAsync(cancellationToken);
         return account;
+    }
+
+    public async Task SetDefaultAccountAsync(
+        SocialPlatform platform,
+        int accountId,
+        CancellationToken cancellationToken = default)
+    {
+        var accountIds = await _db.SocialAccounts
+            .AsNoTracking()
+            .Where(a => a.Platform == platform)
+            .Select(a => a.Id)
+            .ToListAsync(cancellationToken);
+
+        foreach (var id in accountIds)
+        {
+            var tracked = await _db.SocialAccounts.FindAsync([id], cancellationToken);
+            if (tracked is not null)
+                tracked.IsDefault = id == accountId;
+        }
+
+        await _db.SaveChangesAsync(cancellationToken);
     }
 
     public async Task DeleteAccountAsync(int accountId, CancellationToken cancellationToken = default)

@@ -13,7 +13,7 @@
         <controls:AppHeaderView Grid.Row="0"
                                 Title="Группы"
                                 ShowTitle="True" />
-        <VerticalStackLayout Grid.Row="1" Spacing="8" Margin="16,0,16,8">
+        <VerticalStackLayout Grid.Row="1" Spacing="8" Padding="{StaticResource PageContentHorizontalPadding}" Margin="0,0,0,8">
             <Label Text="{Binding EmptyTagsHint}"
                    TextColor="{DynamicResource TextMuted}"
                    FontSize="13"
@@ -38,7 +38,7 @@
 
         <CollectionView Grid.Row="2"
                         ItemsSource="{Binding FilteredItems}"
-                        Margin="16,0,16,16">
+                        Margin="0,0,0,16">
             <CollectionView.ItemsLayout>
                 <LinearItemsLayout Orientation="Vertical" ItemSpacing="5" />
             </CollectionView.ItemsLayout>

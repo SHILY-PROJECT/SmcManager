@@ -1,9 +1,7 @@
-using Microsoft.EntityFrameworkCore;
 using SmcManager.Core.Enums;
 using SmcManager.Core.Interfaces;
 using SmcManager.Core.Models;
 using SmcManager.Core.Services;
-using SmcManager.Infrastructure.Data;
 
 namespace SmcManager.Infrastructure.Services;
 
@@ -12,12 +10,10 @@ namespace SmcManager.Infrastructure.Services;
 /// </summary>
 public class SocialAccountService : ISocialAccountService
 {
-    private readonly AppDbContext _db;
     private readonly IContentRepository _repository;
 
-    public SocialAccountService(AppDbContext db, IContentRepository repository)
+    public SocialAccountService(IContentRepository repository)
     {
-        _db = db;
         _repository = repository;
     }
 
@@ -38,7 +34,7 @@ public class SocialAccountService : ISocialAccountService
     public async Task<SocialAccount?> GetAccountByIdAsync(int id, CancellationToken cancellationToken = default)
     {
         await _repository.InitializeAsync(cancellationToken);
-        return await _db.SocialAccounts.FindAsync([id], cancellationToken);
+        return await _repository.GetAccountByIdAsync(id, cancellationToken);
     }
 
     public async Task<SocialAccount?> GetDefaultAccountAsync(
@@ -83,7 +79,7 @@ public class SocialAccountService : ISocialAccountService
     public async Task DeleteAccountAsync(int accountId, CancellationToken cancellationToken = default)
     {
         await _repository.InitializeAsync(cancellationToken);
-        var account = await _db.SocialAccounts.FindAsync([accountId], cancellationToken);
+        var account = await _repository.GetAccountByIdAsync(accountId, cancellationToken);
         if (account is null) return;
 
         var wasDefault = account.IsDefault;
@@ -105,15 +101,7 @@ public class SocialAccountService : ISocialAccountService
         CancellationToken cancellationToken = default)
     {
         await _repository.InitializeAsync(cancellationToken);
-
-        var accounts = await _db.SocialAccounts
-            .Where(a => a.Platform == platform)
-            .ToListAsync(cancellationToken);
-
-        foreach (var account in accounts)
-            account.IsDefault = account.Id == accountId;
-
-        await _db.SaveChangesAsync(cancellationToken);
+        await _repository.SetDefaultAccountAsync(platform, accountId, cancellationToken);
     }
 
     public async Task<SocialAccount?> ResolveForDownloadAsync(

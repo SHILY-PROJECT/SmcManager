@@ -15,28 +15,25 @@
         <RefreshView Grid.Row="1"
                      IsRefreshing="{Binding IsRefreshing}"
                      Command="{Binding RefreshCommand}">
-            <!-- ScrollView на всю ширину: полоса прокрутки у края экрана, как на «Главной» -->
-            <ScrollView>
-                <VerticalStackLayout Padding="20,8,20,16"
-                                     Spacing="5">
+            <CollectionView ItemsSource="{Binding Items}"
+                            Margin="0,0,0,16">
+                <CollectionView.ItemsLayout>
+                    <LinearItemsLayout Orientation="Vertical" ItemSpacing="5" />
+                </CollectionView.ItemsLayout>
+                <CollectionView.EmptyView>
                     <Label Text="Список пуст. Скачайте первый пост в разделе «Скачать»."
                            TextColor="{DynamicResource TextMuted}"
                            HorizontalOptions="Center"
-                           Margin="12"
-                           IsVisible="{Binding HasNoItems}" />
-                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding Items}"
-                                         Spacing="5"
-                                         IsVisible="{Binding HasNoItems, Converter={StaticResource InvertedBoolConverter}}">
-                        <BindableLayout.ItemTemplate>
-                            <DataTemplate x:DataType="vm:ContentItemDisplayModel">
-                                <controls:ContentCardView Item="{Binding .}"
-                                                          OpenCommand="{Binding Source={RelativeSource AncestorType={x:Type vm:LibraryViewModel}}, Path=OpenContentCommand}"
-                                                          DeleteCommand="{Binding Source={RelativeSource AncestorType={x:Type vm:LibraryViewModel}}, Path=DeleteItemCommand}" />
-                            </DataTemplate>
-                        </BindableLayout.ItemTemplate>
-                    </VerticalStackLayout>
-                </VerticalStackLayout>
-            </ScrollView>
+                           Margin="24" />
+                </CollectionView.EmptyView>
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="vm:ContentItemDisplayModel">
+                        <controls:ContentCardView Item="{Binding .}"
+                                                  OpenCommand="{Binding Source={RelativeSource AncestorType={x:Type vm:LibraryViewModel}}, Path=OpenContentCommand}"
+                                                  DeleteCommand="{Binding Source={RelativeSource AncestorType={x:Type vm:LibraryViewModel}}, Path=DeleteItemCommand}" />
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
         </RefreshView>
     </Grid>
 </ContentPage>

@@ -1,3 +1,4 @@
+using SmcManager.Core.Enums;
 using SmcManager.Core.Models;
 
 namespace SmcManager.Core.Interfaces;
@@ -41,7 +42,14 @@ public interface IContentRepository
 
     Task<IReadOnlyList<SocialAccount>> GetAccountsAsync(CancellationToken cancellationToken = default);
 
+    Task<SocialAccount?> GetAccountByIdAsync(int id, CancellationToken cancellationToken = default);
+
     Task<SocialAccount> SaveAccountAsync(SocialAccount account, CancellationToken cancellationToken = default);
+
+    Task SetDefaultAccountAsync(
+        SocialPlatform platform,
+        int accountId,
+        CancellationToken cancellationToken = default);
 
     Task DeleteAccountAsync(int accountId, CancellationToken cancellationToken = default);
 }

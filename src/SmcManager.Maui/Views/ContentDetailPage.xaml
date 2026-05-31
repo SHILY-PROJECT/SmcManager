@@ -21,7 +21,7 @@
                                 ShowTitle="True" />
 
         <ScrollView Grid.Row="1">
-            <VerticalStackLayout Padding="16,16,16,8" Spacing="16">
+            <VerticalStackLayout Padding="{StaticResource PageScrollContentPadding}" Spacing="16">
             <Grid IsVisible="{Binding HasMediaSlides}"
                   ColumnDefinitions="48,*,48"
                   ColumnSpacing="6"

@@ -14,7 +14,7 @@
                                 Title="Цвет тега"
                                 ShowTitle="True" />
         <ScrollView Grid.Row="1">
-            <VerticalStackLayout Padding="20" Spacing="16">
+            <VerticalStackLayout Padding="{StaticResource PageScrollContentPaddingWide}" Spacing="16">
                 <Border Style="{StaticResource CardBorderStyle}">
                     <Grid ColumnDefinitions="Auto,*"
                           ColumnSpacing="12"

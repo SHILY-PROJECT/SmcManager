@@ -2,6 +2,22 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
                     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
 
+    <Thickness x:Key="PageContentHorizontalPadding">16,0,16,0</Thickness>
+    <Thickness x:Key="PageScrollContentPadding">16,16,16,16</Thickness>
+    <Thickness x:Key="PageScrollContentPaddingWide">20,20,20,20</Thickness>
+
+    <Style TargetType="ScrollView">
+        <Setter Property="HorizontalOptions" Value="Fill" />
+    </Style>
+
+    <Style TargetType="CollectionView">
+        <Setter Property="HorizontalOptions" Value="Fill" />
+    </Style>
+
+    <Style TargetType="RefreshView">
+        <Setter Property="HorizontalOptions" Value="Fill" />
+    </Style>
+
     <!-- .NET 10: ContentPage по умолчанию edge-to-edge; на Android шапка иногда уезжает под статус-бар при Shell-навигации -->
     <Style TargetType="ContentPage">
         <Setter Property="SafeAreaEdges" Value="Container" />

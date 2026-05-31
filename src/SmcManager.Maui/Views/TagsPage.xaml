@@ -14,7 +14,7 @@
                                 Title="Теги"
                                 ShowTitle="True" />
         <ScrollView Grid.Row="1">
-            <VerticalStackLayout Padding="20" Spacing="20">
+            <VerticalStackLayout Padding="{StaticResource PageScrollContentPaddingWide}" Spacing="20">
                 <Border Style="{StaticResource CardBorderStyle}">
                     <VerticalStackLayout Spacing="14">
                         <Label Text="Новый тег"

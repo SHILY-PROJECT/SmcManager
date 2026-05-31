@@ -106,6 +106,7 @@ public partial class SettingsViewModel : ObservableObject
     private bool _suppressThemeChange;
     private bool _suppressSectionPersistence;
     private bool _suppressTagSortChange;
+    private readonly SemaphoreSlim _loadAccountsGate = new(1, 1);
 
     [ObservableProperty]
     private bool _isAppearanceSectionExpanded = true;
@@ -475,6 +476,7 @@ public partial class SettingsViewModel : ObservableObject
                 ConnectedAt = DateTime.UtcNow
             });
 
+            await EnableAuthenticatedDownloadAsync(account);
             await LoadAccountsAsync();
 
             if (!string.IsNullOrWhiteSpace(result.Username))
@@ -529,6 +531,7 @@ public partial class SettingsViewModel : ObservableObject
             ConnectedAt = DateTime.UtcNow
         });
 
+        await EnableAuthenticatedDownloadAsync(account);
         await LoadAccountsAsync();
 
         NewAccountDisplayName = string.Empty;
@@ -569,7 +572,45 @@ public partial class SettingsViewModel : ObservableObject
 
     private async Task LoadAccountsAsync()
     {
-        var list = await _accountService.GetAccountsAsync();
+        await _loadAccountsGate.WaitAsync();
+        try
+        {
+            var list = await _accountService.GetAccountsAsync();
+            PopulateAccountRows(list);
+
+            if (await TryEnrichAccountUsernamesAsync(list))
+            {
+                list = await _accountService.GetAccountsAsync();
+                PopulateAccountRows(list);
+            }
+        }
+        finally
+        {
+            _loadAccountsGate.Release();
+        }
+    }
+
+    private void PopulateAccountRows(IReadOnlyList<SocialAccount> list)
+    {
+        DetachAccountRowHandlers();
+        AccountRows.Clear();
+
+        foreach (var account in list)
+        {
+            var row = new SocialAccountRowViewModel(account);
+            PropertyChangedEventHandler handler = async (_, e) =>
+            {
+                if (e.PropertyName == nameof(SocialAccountRowViewModel.IsActive))
+                    await PersistAccountActiveAsync(row);
+            };
+            row.PropertyChanged += handler;
+            _accountRowHandlers[row] = handler;
+            AccountRows.Add(row);
+        }
+    }
+
+    private async Task<bool> TryEnrichAccountUsernamesAsync(IReadOnlyList<SocialAccount> list)
+    {
         var changed = false;
 
         foreach (var account in list)
@@ -607,24 +648,21 @@ public partial class SettingsViewModel : ObservableObject
             changed = true;
         }
 
-        if (changed)
-            list = await _accountService.GetAccountsAsync();
+        return changed;
+    }
 
-        DetachAccountRowHandlers();
-        AccountRows.Clear();
+    private async Task EnableAuthenticatedDownloadAsync(SocialAccount account)
+    {
+        if (!SocialAccountAuth.HasAuth(account))
+            return;
 
-        foreach (var account in list)
-        {
-            var row = new SocialAccountRowViewModel(account);
-            PropertyChangedEventHandler handler = async (_, e) =>
-            {
-                if (e.PropertyName == nameof(SocialAccountRowViewModel.IsActive))
-                    await PersistAccountActiveAsync(row);
-            };
-            row.PropertyChanged += handler;
-            _accountRowHandlers[row] = handler;
-            AccountRows.Add(row);
-        }
+        var settings = await _settings.GetAppSettingsAsync();
+        if (!settings.PreferDownloadWithoutAccount)
+            return;
+
+        settings.PreferDownloadWithoutAccount = false;
+        await _settings.SaveAppSettingsAsync(settings);
+        PreferDownloadWithoutAccount = false;
     }
 
     private void DetachAccountRowHandlers()

@@ -15,7 +15,7 @@
                                 Title="Настройки"
                                 ShowTitle="True" />
         <ScrollView Grid.Row="1">
-            <VerticalStackLayout Padding="20" Spacing="14">
+            <VerticalStackLayout Padding="{StaticResource PageScrollContentPaddingWide}" Spacing="14">
 
                 <toolkit:Expander IsExpanded="{Binding IsAppearanceSectionExpanded}">
                     <toolkit:Expander.Header>

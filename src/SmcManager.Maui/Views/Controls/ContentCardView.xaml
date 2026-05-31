@@ -14,8 +14,10 @@
                                   VerticalOptions="Center" />
         </DataTemplate>
     </ContentView.Resources>
-    <SwipeView x:Name="CardSwipeView"
-               IsEnabled="{Binding IsSwipeEnabled, Source={x:Reference Root}}">
+    <Grid ColumnDefinitions="16,*,16">
+        <SwipeView x:Name="CardSwipeView"
+                   Grid.Column="1"
+                   IsEnabled="{Binding IsSwipeEnabled, Source={x:Reference Root}}">
         <SwipeView.RightItems>
             <SwipeItems Mode="Reveal">
                 <SwipeItem Text="Удалить"
@@ -104,5 +106,6 @@
                         SemanticProperties.Description="Открыть контент" />
             </Grid>
         </Border>
-    </SwipeView>
+        </SwipeView>
+    </Grid>
 </ContentView>
