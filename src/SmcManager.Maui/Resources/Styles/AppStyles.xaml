@@ -1,0 +1,275 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ResourceDictionary xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
+
+    <Thickness x:Key="PageContentHorizontalPadding">16,0,16,0</Thickness>
+    <Thickness x:Key="PageScrollContentPadding">16,16,16,16</Thickness>
+    <Thickness x:Key="PageScrollContentPaddingWide">20,20,20,20</Thickness>
+
+    <Style TargetType="ScrollView">
+        <Setter Property="HorizontalOptions" Value="Fill" />
+    </Style>
+
+    <Style TargetType="CollectionView">
+        <Setter Property="HorizontalOptions" Value="Fill" />
+    </Style>
+
+    <Style TargetType="RefreshView">
+        <Setter Property="HorizontalOptions" Value="Fill" />
+    </Style>
+
+    <!-- .NET 10: ContentPage по умолчанию edge-to-edge; на Android шапка иногда уезжает под статус-бар при Shell-навигации -->
+    <Style TargetType="ContentPage">
+        <Setter Property="SafeAreaEdges" Value="Container" />
+    </Style>
+
+    <Style x:Key="SectionTitleStyle" TargetType="Label">
+        <Setter Property="FontSize" Value="20" />
+        <Setter Property="FontAttributes" Value="Bold" />
+        <Setter Property="TextColor" Value="{DynamicResource TextPrimary}" />
+    </Style>
+
+    <Style x:Key="SectionSubtitleStyle" TargetType="Label">
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="TextColor" Value="{DynamicResource TextSecondary}" />
+    </Style>
+
+    <Style x:Key="PreviewIndicatorIconStyle" TargetType="Image">
+        <Setter Property="WidthRequest" Value="20" />
+        <Setter Property="HeightRequest" Value="20" />
+        <Setter Property="MaximumWidthRequest" Value="20" />
+        <Setter Property="MaximumHeightRequest" Value="20" />
+        <Setter Property="Aspect" Value="AspectFit" />
+        <Setter Property="HorizontalOptions" Value="Fill" />
+        <Setter Property="VerticalOptions" Value="Fill" />
+    </Style>
+
+    <Style x:Key="CardBorderStyle" TargetType="Border">
+        <Setter Property="BackgroundColor" Value="{DynamicResource BackgroundElevated}" />
+        <Setter Property="Stroke" Value="{DynamicResource Divider}" />
+        <Setter Property="StrokeThickness" Value="1" />
+        <Setter Property="Padding" Value="12" />
+        <Setter Property="StrokeShape">
+            <RoundRectangle CornerRadius="16" />
+        </Setter>
+    </Style>
+
+    <Style x:Key="InputBorderStyle" TargetType="Border">
+        <Setter Property="BackgroundColor" Value="{DynamicResource BackgroundSecondary}" />
+        <Setter Property="Stroke" Value="{DynamicResource Divider}" />
+        <Setter Property="StrokeThickness" Value="1" />
+        <Setter Property="Padding" Value="12,4" />
+        <Setter Property="StrokeShape">
+            <RoundRectangle CornerRadius="12" />
+        </Setter>
+    </Style>
+
+    <Style TargetType="Picker">
+        <Setter Property="TextColor" Value="{DynamicResource TextPrimary}" />
+        <Setter Property="TitleColor" Value="{DynamicResource TextMuted}" />
+        <Setter Property="BackgroundColor" Value="{DynamicResource BackgroundSecondary}" />
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="MinimumHeightRequest" Value="44" />
+    </Style>
+
+    <Style x:Key="PrimaryButtonStyle" TargetType="Button">
+        <Setter Property="BackgroundColor" Value="{DynamicResource AccentPrimary}" />
+        <Setter Property="TextColor" Value="{StaticResource White}" />
+        <Setter Property="FontAttributes" Value="Bold" />
+        <Setter Property="CornerRadius" Value="12" />
+        <Setter Property="Padding" Value="16,12" />
+    </Style>
+
+    <Style x:Key="DownloadPrimaryButtonStyle" TargetType="Button" BasedOn="{StaticResource PrimaryButtonStyle}">
+        <Setter Property="BackgroundColor" Value="{DynamicResource DownloadAccent}" />
+    </Style>
+
+    <Style x:Key="SecondaryButtonStyle" TargetType="Button">
+        <Setter Property="BackgroundColor" Value="{DynamicResource BackgroundElevated}" />
+        <Setter Property="TextColor" Value="{DynamicResource TextPrimary}" />
+        <Setter Property="CornerRadius" Value="12" />
+        <Setter Property="Padding" Value="16,12" />
+    </Style>
+
+    <Style x:Key="DangerButtonStyle" TargetType="Button">
+        <Setter Property="BackgroundColor" Value="Transparent" />
+        <Setter Property="TextColor" Value="{DynamicResource Danger}" />
+        <Setter Property="FontSize" Value="13" />
+    </Style>
+
+    <Style x:Key="ClearUrlCircleButtonStyle" TargetType="Button">
+        <Setter Property="BackgroundColor" Value="Transparent" />
+        <Setter Property="TextColor" Value="{DynamicResource TextPrimary}" />
+        <Setter Property="BorderWidth" Value="0" />
+        <Setter Property="CornerRadius" Value="24" />
+        <Setter Property="WidthRequest" Value="48" />
+        <Setter Property="HeightRequest" Value="48" />
+        <Setter Property="MinimumWidthRequest" Value="48" />
+        <Setter Property="MinimumHeightRequest" Value="48" />
+        <Setter Property="Padding" Value="0,1,0,0" />
+        <Setter Property="FontSize" Value="22" />
+        <Setter Property="HorizontalOptions" Value="Center" />
+        <Setter Property="VerticalOptions" Value="Center" />
+    </Style>
+
+    <Style x:Key="NeutralTextButtonStyle" TargetType="Button">
+        <Setter Property="BackgroundColor" Value="Transparent" />
+        <Setter Property="TextColor" Value="{DynamicResource TextSecondary}" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Padding" Value="0" />
+    </Style>
+
+    <Style x:Key="IconActionButtonStyle" TargetType="ImageButton">
+        <Setter Property="WidthRequest" Value="36" />
+        <Setter Property="HeightRequest" Value="36" />
+        <Setter Property="Padding" Value="6" />
+        <Setter Property="BackgroundColor" Value="Transparent" />
+        <Setter Property="CornerRadius" Value="18" />
+    </Style>
+
+    <Style x:Key="SecondaryIconButtonStyle" TargetType="Button" BasedOn="{StaticResource SecondaryButtonStyle}">
+        <Setter Property="WidthRequest" Value="48" />
+        <Setter Property="HeightRequest" Value="48" />
+        <Setter Property="Padding" Value="12" />
+        <Setter Property="MinimumWidthRequest" Value="48" />
+        <Setter Property="MinimumHeightRequest" Value="48" />
+    </Style>
+
+    <Style x:Key="DownloadIconButtonStyle" TargetType="Button" BasedOn="{StaticResource DownloadPrimaryButtonStyle}">
+        <Setter Property="WidthRequest" Value="48" />
+        <Setter Property="HeightRequest" Value="48" />
+        <Setter Property="Padding" Value="12" />
+        <Setter Property="MinimumWidthRequest" Value="48" />
+        <Setter Property="MinimumHeightRequest" Value="48" />
+    </Style>
+
+    <Style x:Key="PrimaryIconButtonStyle" TargetType="Button" BasedOn="{StaticResource PrimaryButtonStyle}">
+        <Setter Property="WidthRequest" Value="48" />
+        <Setter Property="HeightRequest" Value="48" />
+        <Setter Property="Padding" Value="12" />
+        <Setter Property="MinimumWidthRequest" Value="48" />
+        <Setter Property="MinimumHeightRequest" Value="48" />
+    </Style>
+
+    <Style x:Key="TagRowActionButtonStyle" TargetType="ImageButton" BasedOn="{StaticResource IconActionButtonStyle}">
+        <Setter Property="WidthRequest" Value="40" />
+        <Setter Property="HeightRequest" Value="40" />
+        <Setter Property="Padding" Value="8" />
+        <Setter Property="CornerRadius" Value="10" />
+    </Style>
+
+    <Style x:Key="TagRowPrimaryIconButtonStyle" TargetType="Button" BasedOn="{StaticResource PrimaryButtonStyle}">
+        <Setter Property="WidthRequest" Value="40" />
+        <Setter Property="HeightRequest" Value="40" />
+        <Setter Property="Padding" Value="8" />
+        <Setter Property="MinimumWidthRequest" Value="40" />
+        <Setter Property="MinimumHeightRequest" Value="40" />
+    </Style>
+
+    <Style x:Key="TagRowSecondaryIconButtonStyle" TargetType="Button" BasedOn="{StaticResource SecondaryButtonStyle}">
+        <Setter Property="WidthRequest" Value="40" />
+        <Setter Property="HeightRequest" Value="40" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="FontSize" Value="16" />
+        <Setter Property="MinimumWidthRequest" Value="40" />
+        <Setter Property="MinimumHeightRequest" Value="40" />
+    </Style>
+
+    <Style x:Key="ChipLabelStyle" TargetType="Label">
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="TextColor" Value="{DynamicResource TextMuted}" />
+    </Style>
+
+    <!-- Шрифт с поддержкой emoji: на Windows — Segoe UI, на остальных — системный. -->
+    <OnPlatform x:Key="EmojiFontFamily" x:TypeArguments="x:String">
+        <On Platform="WinUI" Value="Segoe UI" />
+        <On Platform="Android" Value="" />
+        <On Platform="iOS" Value="" />
+        <On Platform="MacCatalyst" Value="" />
+    </OnPlatform>
+
+    <Style x:Key="SettingsSectionIconStyle" TargetType="Label">
+        <Setter Property="FontFamily" Value="{StaticResource EmojiFontFamily}" />
+        <Setter Property="FontSize" Value="22" />
+        <Setter Property="VerticalOptions" Value="Center" />
+    </Style>
+
+    <Style x:Key="SocialTagChipBorderStyle" TargetType="Border">
+        <Setter Property="Padding" Value="10,4" />
+        <Setter Property="StrokeThickness" Value="1" />
+        <Setter Property="BackgroundColor" Value="{DynamicResource TagChipFill}" />
+        <Setter Property="Stroke" Value="{DynamicResource TagChipStroke}" />
+        <Setter Property="MinimumHeightRequest" Value="26" />
+        <Setter Property="StrokeShape">
+            <RoundRectangle CornerRadius="13" />
+        </Setter>
+    </Style>
+
+    <Style x:Key="SocialTagChipLabelStyle" TargetType="Label">
+        <Setter Property="FontFamily" Value="{StaticResource EmojiFontFamily}" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="TextColor" Value="{DynamicResource TagChipText}" />
+        <Setter Property="VerticalOptions" Value="Center" />
+        <Setter Property="LineBreakMode" Value="NoWrap" />
+    </Style>
+
+    <Style x:Key="SocialTagListChipBorderStyle" TargetType="Border" BasedOn="{StaticResource SocialTagChipBorderStyle}">
+        <Setter Property="HorizontalOptions" Value="Start" />
+        <Setter Property="Margin" Value="0,0,0,4" />
+    </Style>
+
+    <Style x:Key="EmojiCapableLabelStyle" TargetType="Label">
+        <Setter Property="FontFamily" Value="{StaticResource EmojiFontFamily}" />
+    </Style>
+
+    <Style x:Key="EmojiCapableEntryStyle" TargetType="Entry">
+        <Setter Property="FontFamily" Value="{StaticResource EmojiFontFamily}" />
+    </Style>
+
+    <Style x:Key="EmojiCapableEditorStyle" TargetType="Editor">
+        <Setter Property="FontFamily" Value="{StaticResource EmojiFontFamily}" />
+    </Style>
+
+    <Style x:Key="FlyoutItemStyle" TargetType="Grid">
+        <Setter Property="Padding" Value="18,14" />
+        <Setter Property="ColumnSpacing" Value="14" />
+    </Style>
+
+    <Style x:Key="MediaOverlayButtonStyle" TargetType="ImageButton">
+        <Setter Property="WidthRequest" Value="36" />
+        <Setter Property="HeightRequest" Value="36" />
+        <Setter Property="Padding" Value="8" />
+        <Setter Property="BackgroundColor" Value="#99000000" />
+        <Setter Property="CornerRadius" Value="18" />
+    </Style>
+
+    <Style x:Key="CarouselNavButtonStyle" TargetType="ImageButton">
+        <Setter Property="WidthRequest" Value="44" />
+        <Setter Property="HeightRequest" Value="44" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="BackgroundColor" Value="Transparent" />
+        <Setter Property="CornerRadius" Value="20" />
+    </Style>
+
+    <Style x:Key="HeaderIconBorderStyle" TargetType="Border">
+        <Setter Property="WidthRequest" Value="44" />
+        <Setter Property="HeightRequest" Value="44" />
+        <Setter Property="BackgroundColor" Value="{DynamicResource BackgroundSecondary}" />
+        <Setter Property="Stroke" Value="{DynamicResource Divider}" />
+        <Setter Property="StrokeThickness" Value="1" />
+        <Setter Property="VerticalOptions" Value="Center" />
+        <Setter Property="StrokeShape">
+            <RoundRectangle CornerRadius="12" />
+        </Setter>
+    </Style>
+
+    <Style x:Key="HeaderIconButtonStyle" TargetType="ImageButton">
+        <Setter Property="WidthRequest" Value="44" />
+        <Setter Property="HeightRequest" Value="44" />
+        <Setter Property="Padding" Value="10" />
+        <Setter Property="BackgroundColor" Value="Transparent" />
+        <Setter Property="HorizontalOptions" Value="Center" />
+        <Setter Property="VerticalOptions" Value="Center" />
+    </Style>
+
+</ResourceDictionary>

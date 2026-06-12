@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="SmcManager.Maui.Views.Controls.ContentCardContextMenuView"
+             BackgroundColor="Transparent">
+    <Border Style="{StaticResource CardBorderStyle}"
+            Padding="4"
+            MinimumWidthRequest="220"
+            MaximumWidthRequest="280">
+        <VerticalStackLayout Spacing="0">
+            <Grid Padding="14,12"
+                  ColumnDefinitions="28,*"
+                  ColumnSpacing="12">
+                <Image Source="{DynamicResource ShareIcon}"
+                       WidthRequest="20"
+                       HeightRequest="20"
+                       VerticalOptions="Center" />
+                <Label Grid.Column="1"
+                       Text="Поделиться"
+                       Style="{StaticResource EmojiCapableLabelStyle}"
+                       TextColor="{DynamicResource TextPrimary}"
+                       FontSize="15"
+                       VerticalOptions="Center" />
+                <Grid.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="OnShareTapped" />
+                </Grid.GestureRecognizers>
+            </Grid>
+
+            <BoxView HeightRequest="1"
+                     Color="{DynamicResource Divider}"
+                     HorizontalOptions="Fill" />
+
+            <Grid Padding="14,12"
+                  ColumnDefinitions="28,*"
+                  ColumnSpacing="12">
+                <Image Source="{DynamicResource DeleteIcon}"
+                       WidthRequest="20"
+                       HeightRequest="20"
+                       VerticalOptions="Center" />
+                <Label Grid.Column="1"
+                       Text="Удалить"
+                       Style="{StaticResource EmojiCapableLabelStyle}"
+                       TextColor="{DynamicResource Danger}"
+                       FontSize="15"
+                       VerticalOptions="Center" />
+                <Grid.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="OnDeleteTapped" />
+                </Grid.GestureRecognizers>
+            </Grid>
+        </VerticalStackLayout>
+    </Border>
+</ContentView>

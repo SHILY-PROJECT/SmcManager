@@ -1,0 +1,371 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:SmcManager.Maui.ViewModels"
+             xmlns:models="clr-namespace:SmcManager.Maui.Models"
+             xmlns:core="clr-namespace:SmcManager.Core.Models;assembly=SmcManager.Core"
+             xmlns:controls="clr-namespace:SmcManager.Maui.Views.Controls"
+             xmlns:sys="clr-namespace:System;assembly=System.Runtime"
+             x:Class="SmcManager.Maui.Views.DownloadPage"
+             x:DataType="vm:DownloadViewModel"
+             Shell.NavBarIsVisible="False"
+             Title="Главная"
+             BackgroundColor="{DynamicResource BackgroundPrimary}">
+    <Grid RowDefinitions="Auto,*">
+        <controls:AppHeaderView Grid.Row="0"
+                                Title="Главная"
+                                ShowTitle="True" />
+        <!-- SelectionChanged вместо тапа: на Android после Share intent жесты в ScrollView+BindableLayout часто не доходят -->
+        <CollectionView x:Name="RecentDownloadsList"
+                        Grid.Row="1"
+                        ItemsSource="{Binding RecentDownloads}"
+                        SelectionMode="Single"
+                        SelectionChanged="OnRecentDownloadSelected">
+            <CollectionView.Header>
+                <VerticalStackLayout Spacing="0">
+                <VerticalStackLayout Padding="20,0,20,0" Spacing="16">
+                <Label Text="Ссылка на контент"
+                       Style="{StaticResource SectionTitleStyle}" />
+
+                <Grid ColumnDefinitions="*,Auto,Auto"
+                      ColumnSpacing="8">
+                    <Border Grid.Column="0"
+                            Style="{StaticResource InputBorderStyle}">
+                        <Entry Text="{Binding Url}"
+                               Placeholder="Instagram, YouTube или VK..."
+                               Style="{StaticResource EmojiCapableEntryStyle}"
+                               TextColor="{DynamicResource TextPrimary}"
+                               PlaceholderColor="{DynamicResource TextMuted}"
+                               Margin="12,0,12,0"
+                               VerticalOptions="Center" />
+                    </Border>
+                    <Button Grid.Column="1"
+                            Text="×"
+                            Style="{StaticResource ClearUrlCircleButtonStyle}"
+                            VerticalOptions="Center"
+                            IsVisible="{Binding HasUrl}"
+                            Command="{Binding ClearUrlCommand}"
+                            SemanticProperties.Description="Очистить ссылку" />
+                    <Button Grid.Column="2"
+                            Style="{StaticResource DownloadIconButtonStyle}"
+                            VerticalOptions="Center"
+                            ImageSource="{DynamicResource PasteIcon}"
+                            Command="{Binding PasteFromClipboardCommand}"
+                            SemanticProperties.Description="Вставить из буфера" />
+                </Grid>
+
+                <VerticalStackLayout BindableLayout.ItemsSource="{Binding PendingLinkPreviews}"
+                                     Spacing="12"
+                                     IsVisible="{Binding HasPendingLinkPreviews}">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="vm:LinkPreviewItemViewModel">
+                            <Border Style="{StaticResource CardBorderStyle}">
+                                <VerticalStackLayout Spacing="14">
+                                    <VerticalStackLayout IsVisible="{Binding IsLoadingMetadata}"
+                                                         Spacing="10"
+                                                         Padding="28,32"
+                                                         HorizontalOptions="Center">
+                                        <ActivityIndicator IsRunning="True"
+                                                           Color="{DynamicResource AccentPrimary}"
+                                                           HorizontalOptions="Center" />
+                                        <Label Text="Загрузка"
+                                               TextColor="{DynamicResource AccentPrimary}"
+                                               FontSize="14"
+                                               HorizontalOptions="Center"
+                                               HorizontalTextAlignment="Center" />
+                                    </VerticalStackLayout>
+
+                                    <VerticalStackLayout IsVisible="{Binding ShowMetadataReady}"
+                                                         Spacing="14">
+                                        <VerticalStackLayout Spacing="6"
+                                                             IsVisible="{Binding ShowAccountPicker}">
+                                            <Label Text="Аккаунт"
+                                                   Style="{StaticResource SectionSubtitleStyle}" />
+                                            <Border Style="{StaticResource InputBorderStyle}">
+                                                <Picker ItemsSource="{Binding AccountOptions}"
+                                                        ItemDisplayBinding="{Binding Title}"
+                                                        SelectedItem="{Binding SelectedAccountOption}"
+                                                        Title="Выберите аккаунт"
+                                                        BackgroundColor="Transparent"
+                                                        TextColor="{DynamicResource TextPrimary}" />
+                                            </Border>
+                                            <Label Text="{Binding AccountPickerHint}"
+                                                   Style="{StaticResource SectionSubtitleStyle}" />
+                                        </VerticalStackLayout>
+
+                                        <Grid Padding="0,0,0,4">
+                                            <Grid ColumnDefinitions="88,*"
+                                                  ColumnSpacing="14">
+                                                <Border WidthRequest="80"
+                                                        HeightRequest="80"
+                                                        StrokeThickness="0"
+                                                        BackgroundColor="{DynamicResource BackgroundSecondary}">
+                                                    <Border.StrokeShape>
+                                                        <RoundRectangle CornerRadius="12" />
+                                                    </Border.StrokeShape>
+                                                    <controls:LocalImageView ImagePath="{Binding PreviewImageFile}"
+                                                                             ImageAspect="AspectFill"
+                                                                             ImageWidth="80"
+                                                                             ImageHeight="80" />
+                                                </Border>
+                                                <VerticalStackLayout Grid.Column="1"
+                                                                     Spacing="4"
+                                                                     VerticalOptions="Center">
+                                                    <Label Text="{Binding PreviewAuthor}"
+                                                           Style="{StaticResource EmojiCapableLabelStyle}"
+                                                           FontAttributes="Bold"
+                                                           TextColor="{DynamicResource TextPrimary}"
+                                                           FontSize="15"
+                                                           LineBreakMode="TailTruncation"
+                                                           MaxLines="1"
+                                                           Margin="0,0,8,0" />
+                                                    <Label Text="{Binding PreviewTitle}"
+                                                           Style="{StaticResource EmojiCapableLabelStyle}"
+                                                           TextColor="{DynamicResource TextSecondary}"
+                                                           FontSize="13"
+                                                           LineBreakMode="WordWrap" />
+                                                </VerticalStackLayout>
+                                            </Grid>
+                                            <HorizontalStackLayout HorizontalOptions="End"
+                                                                   VerticalOptions="Start"
+                                                                   Spacing="6"
+                                                                   IsVisible="{Binding ShowPreviewAccountIndicators}">
+                                                <Grid WidthRequest="20"
+                                                      HeightRequest="20"
+                                                      VerticalOptions="Center">
+                                                    <Image Source="{Binding PreviewAuthStatusIconFile}"
+                                                           Style="{StaticResource PreviewIndicatorIconStyle}"
+                                                           SemanticProperties.Description="{Binding PreviewAuthStatusDescription}" />
+                                                </Grid>
+                                                <Grid WidthRequest="20"
+                                                      HeightRequest="20"
+                                                      VerticalOptions="Center">
+                                                    <Image Source="{Binding PreviewPlatformIconFile}"
+                                                           Style="{StaticResource PreviewIndicatorIconStyle}"
+                                                           SemanticProperties.Description="Соцсеть" />
+                                                </Grid>
+                                            </HorizontalStackLayout>
+                                        </Grid>
+
+                                        <Picker ItemsSource="{Binding QualityOptions}"
+                                                ItemDisplayBinding="{Binding Label}"
+                                                SelectedItem="{Binding SelectedQuality}"
+                                                IsVisible="{Binding ShowQualityPicker}"
+                                                BackgroundColor="Transparent"
+                                                TextColor="{DynamicResource TextPrimary}" />
+
+                                        <Grid ColumnDefinitions="*,Auto"
+                                              ColumnSpacing="8"
+                                              HeightRequest="40">
+                                            <CollectionView Grid.Column="0"
+                                                            ItemsSource="{Binding Source={RelativeSource AncestorType={x:Type vm:DownloadViewModel}}, Path=TagChips}"
+                                                            HeightRequest="40"
+                                                            SelectionMode="None">
+                                                <CollectionView.ItemsLayout>
+                                                    <LinearItemsLayout Orientation="Horizontal" ItemSpacing="6" />
+                                                </CollectionView.ItemsLayout>
+                                                <CollectionView.Header>
+                                                    <controls:TagChipView Text="Без тега"
+                                                                          Margin="0,0,6,0"
+                                                                          IsSelected="{Binding IsNoTagSelected, Source={RelativeSource AncestorType={x:Type vm:DownloadViewModel}}}"
+                                                                          SelectCommand="{Binding Source={RelativeSource AncestorType={x:Type vm:DownloadViewModel}}, Path=ClearTagCommand}" />
+                                                </CollectionView.Header>
+                                                <CollectionView.ItemTemplate>
+                                                    <DataTemplate x:DataType="models:TagChipViewModel">
+                                                        <controls:TagChipView Text="{Binding Name}"
+                                                                              ColorHex="{Binding ColorHex}"
+                                                                              IsSelected="{Binding IsSelected}"
+                                                                              SelectCommand="{Binding Source={RelativeSource AncestorType={x:Type vm:DownloadViewModel}}, Path=ToggleTagChipCommand}"
+                                                                              SelectParameter="{Binding .}" />
+                                                    </DataTemplate>
+                                                </CollectionView.ItemTemplate>
+                                            </CollectionView>
+
+                                            <ImageButton Grid.Column="1"
+                                                         WidthRequest="40"
+                                                         HeightRequest="40"
+                                                         Style="{StaticResource TagRowActionButtonStyle}"
+                                                         Source="{DynamicResource AddTagIcon}"
+                                                         VerticalOptions="Center"
+                                                         Command="{Binding Source={RelativeSource AncestorType={x:Type vm:DownloadViewModel}}, Path=ToggleNewTagPanelCommand}"
+                                                         SemanticProperties.Description="Добавить новый тег" />
+                                        </Grid>
+
+                                        <HorizontalStackLayout Spacing="8"
+                                                               HorizontalOptions="End">
+                                            <Button Style="{StaticResource SecondaryIconButtonStyle}"
+                                                    WidthRequest="40"
+                                                    HeightRequest="40"
+                                                    Padding="8"
+                                                    MinimumWidthRequest="40"
+                                                    MinimumHeightRequest="40"
+                                                    ImageSource="{DynamicResource DeleteIcon}"
+                                                    Command="{Binding Source={RelativeSource AncestorType={x:Type vm:DownloadViewModel}}, Path=DismissPreviewCommand}"
+                                                    CommandParameter="{Binding .}"
+                                                    SemanticProperties.Description="Закрыть предпросмотр" />
+                                            <Button Style="{StaticResource DownloadIconButtonStyle}"
+                                                    WidthRequest="40"
+                                                    HeightRequest="40"
+                                                    Padding="8"
+                                                    MinimumWidthRequest="40"
+                                                    MinimumHeightRequest="40"
+                                                    ImageSource="{DynamicResource DownloadButtonIcon}"
+                                                    IsVisible="{Binding ShowPreviewDownloadButton}"
+                                                    Command="{Binding Source={RelativeSource AncestorType={x:Type vm:DownloadViewModel}}, Path=DownloadPreviewCommand}"
+                                                    CommandParameter="{Binding .}"
+                                                    SemanticProperties.Description="Скачать" />
+                                        </HorizontalStackLayout>
+                                    </VerticalStackLayout>
+                                </VerticalStackLayout>
+                            </Border>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </VerticalStackLayout>
+
+                <VerticalStackLayout Spacing="14"
+                                     IsVisible="{Binding ShowNewTagPanel}">
+                    <Label Text="Новый тег"
+                           Style="{StaticResource SectionTitleStyle}"
+                           FontSize="18" />
+                    <Label Text="Быстрые эмодзи"
+                           Style="{StaticResource SectionSubtitleStyle}" />
+                    <CollectionView ItemsSource="{Binding EmojiSuggestions}"
+                                    HeightRequest="44"
+                                    SelectionMode="None">
+                        <CollectionView.ItemsLayout>
+                            <LinearItemsLayout Orientation="Horizontal" ItemSpacing="6" />
+                        </CollectionView.ItemsLayout>
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="x:String">
+                                <Button Text="{Binding .}"
+                                        Style="{StaticResource SecondaryButtonStyle}"
+                                        FontSize="20"
+                                        Padding="10,4"
+                                        MinimumWidthRequest="44"
+                                        MinimumHeightRequest="40"
+                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:DownloadViewModel}}, Path=AppendEmojiCommand}"
+                                        CommandParameter="{Binding .}" />
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                    <Grid ColumnDefinitions="*,Auto,Auto"
+                          ColumnSpacing="8">
+                        <Border Grid.Column="0"
+                                Style="{StaticResource InputBorderStyle}"
+                                HeightRequest="48"
+                                VerticalOptions="Center">
+                            <Entry Text="{Binding NewTagName}"
+                                   Placeholder="Название тега (можно с эмодзи 🍕)"
+                                   Style="{StaticResource EmojiCapableEntryStyle}"
+                                   TextColor="{DynamicResource TextPrimary}"
+                                   PlaceholderColor="{DynamicResource TextMuted}"
+                                   MaxLength="32"
+                                   VerticalOptions="Center" />
+                        </Border>
+                        <controls:TagColorPickerView Grid.Column="1"
+                                                     SelectedColor="{Binding SelectedTagColor}"
+                                                     VerticalOptions="Center" />
+                        <Button Grid.Column="2"
+                                Style="{StaticResource PrimaryIconButtonStyle}"
+                                VerticalOptions="Center"
+                                ImageSource="{DynamicResource AddTagIcon}"
+                                Command="{Binding AddTagCommand}"
+                                SemanticProperties.Description="Добавить тег" />
+                    </Grid>
+                    <Label Text="{Binding NewTagStatusMessage}"
+                           Style="{StaticResource EmojiCapableLabelStyle}"
+                           TextColor="{DynamicResource AccentSecondary}"
+                           FontSize="13" />
+                </VerticalStackLayout>
+
+                <Label Text="Скачивания"
+                       Style="{StaticResource SectionSubtitleStyle}"
+                       IsVisible="{Binding HasActiveDownloads}" />
+
+                <VerticalStackLayout BindableLayout.ItemsSource="{Binding ActiveDownloads}"
+                                     Spacing="8"
+                                     IsVisible="{Binding HasActiveDownloads}">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="vm:PendingDownloadViewModel">
+                            <Border Style="{StaticResource CardBorderStyle}"
+                                    Margin="0,0,0,8">
+                                <VerticalStackLayout Spacing="8">
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                        <VerticalStackLayout Spacing="2">
+                                            <Label Text="{Binding DisplayTitle}"
+                                                   Style="{StaticResource EmojiCapableLabelStyle}"
+                                                   FontAttributes="Bold"
+                                                   TextColor="{DynamicResource TextPrimary}"
+                                                   FontSize="14"
+                                                   LineBreakMode="TailTruncation"
+                                                   MaxLines="1" />
+                                            <Label Text="{Binding DisplaySubtitle}"
+                                                   Style="{StaticResource EmojiCapableLabelStyle}"
+                                                   TextColor="{DynamicResource TextMuted}"
+                                                   FontSize="12"
+                                                   LineBreakMode="TailTruncation"
+                                                   MaxLines="1" />
+                                        </VerticalStackLayout>
+                                        <Button Grid.Column="1"
+                                                Text="×"
+                                                Style="{StaticResource SecondaryButtonStyle}"
+                                                WidthRequest="36"
+                                                HeightRequest="36"
+                                                Padding="0"
+                                                IsVisible="{Binding IsFinished}"
+                                                Command="{Binding Source={RelativeSource AncestorType={x:Type vm:DownloadViewModel}}, Path=DismissDownloadJobCommand}"
+                                                CommandParameter="{Binding .}" />
+                                    </Grid>
+                                    <ProgressBar Progress="{Binding Progress}"
+                                                 ProgressColor="{DynamicResource DownloadAccent}" />
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                        <Label Text="{Binding Status}"
+                                               Style="{StaticResource EmojiCapableLabelStyle}"
+                                               TextColor="{DynamicResource TextSecondary}"
+                                               FontSize="12"
+                                               LineBreakMode="WordWrap" />
+                                        <ActivityIndicator Grid.Column="1"
+                                                           IsRunning="{Binding IsActive}"
+                                                           IsVisible="{Binding IsActive}"
+                                                           Color="{DynamicResource AccentPrimary}"
+                                                           HeightRequest="20"
+                                                           WidthRequest="20" />
+                                    </Grid>
+                                </VerticalStackLayout>
+                            </Border>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </VerticalStackLayout>
+
+                <Label Text="{Binding StatusMessage}"
+                       Style="{StaticResource EmojiCapableLabelStyle}"
+                       TextColor="{DynamicResource TextSecondary}"
+                       FontSize="13" />
+                </VerticalStackLayout>
+                <Label Text="{Binding RecentDownloadsHeader}"
+                       Style="{StaticResource SectionTitleStyle}"
+                       Margin="16,12,16,8" />
+            </VerticalStackLayout>
+            </CollectionView.Header>
+            <CollectionView.ItemsLayout>
+                <LinearItemsLayout Orientation="Vertical" ItemSpacing="5" />
+            </CollectionView.ItemsLayout>
+            <CollectionView.EmptyView>
+                <Label Text="Пока ничего не скачано"
+                       TextColor="{DynamicResource TextMuted}"
+                       HorizontalOptions="Center"
+                       Margin="24" />
+            </CollectionView.EmptyView>
+            <CollectionView.Footer>
+                <BoxView HeightRequest="16" Color="Transparent" />
+            </CollectionView.Footer>
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="vm:ContentItemDisplayModel">
+                    <controls:ContentCardView Item="{Binding .}"
+                                              IsNavigationEnabled="False"
+                                              DeleteCommand="{Binding Source={RelativeSource AncestorType={x:Type vm:DownloadViewModel}}, Path=DeleteRecentItemCommand}" />
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+    </Grid>
+</ContentPage>

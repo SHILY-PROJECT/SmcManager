@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:SmcManager.Maui.ViewModels"
+             xmlns:controls="clr-namespace:SmcManager.Maui.Views.Controls"
+             x:Class="SmcManager.Maui.Views.Controls.ContentCardView"
+             x:Name="Root">
+    <ContentView.Resources>
+        <DataTemplate x:Key="ContentTagChipTemplate"
+                      x:DataType="vm:ContentTagDisplayModel">
+            <controls:TagChipView Text="{Binding Name}"
+                                  ColorHex="{Binding ColorHex}"
+                                  IsSelected="False"
+                                  VerticalOptions="Center" />
+        </DataTemplate>
+    </ContentView.Resources>
+    <Grid ColumnDefinitions="16,*,16">
+        <Border x:Name="CardBorder"
+                Grid.Column="1"
+                Style="{StaticResource CardBorderStyle}"
+                Padding="12,15,12,15">
+            <Border.GestureRecognizers>
+                <TapGestureRecognizer Tapped="OnCardTapped" />
+            </Border.GestureRecognizers>
+            <Grid Padding="4">
+                <Grid ColumnDefinitions="95,*" ColumnSpacing="14">
+                    <Border WidthRequest="87"
+                            HeightRequest="87"
+                            StrokeThickness="0">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="12" />
+                        </Border.StrokeShape>
+                        <Image Source="{Binding ThumbnailSource, Source={x:Reference Root}}"
+                               Aspect="AspectFill" />
+                    </Border>
+                    <VerticalStackLayout Grid.Column="1" Spacing="4" VerticalOptions="Center">
+                        <Label Text="{Binding AuthorUsername, Source={x:Reference Root}}"
+                               Style="{StaticResource EmojiCapableLabelStyle}"
+                               FontAttributes="Bold"
+                               TextColor="{DynamicResource TextPrimary}"
+                               FontSize="15"
+                               InputTransparent="True" />
+                        <Label Text="{Binding CaptionPreview, Source={x:Reference Root}}"
+                               Style="{StaticResource EmojiCapableLabelStyle}"
+                               TextColor="{DynamicResource TextSecondary}"
+                               FontSize="13"
+                               LineBreakMode="TailTruncation"
+                               MaxLines="2"
+                               InputTransparent="True" />
+                        <Label Text="{Binding CommentPreview, Source={x:Reference Root}}"
+                               Style="{StaticResource EmojiCapableLabelStyle}"
+                               TextColor="{DynamicResource TextMuted}"
+                               FontSize="12"
+                               LineBreakMode="TailTruncation"
+                               MaxLines="1"
+                               IsVisible="{Binding HasCommentPreview, Source={x:Reference Root}}"
+                               InputTransparent="True" />
+                        <HorizontalStackLayout Spacing="8" InputTransparent="True">
+                            <Label Text="{Binding KindLabel, Source={x:Reference Root}}"
+                                   Style="{StaticResource ChipLabelStyle}"
+                                   InputTransparent="True" />
+                            <Label Text="{Binding MediaCount, Source={x:Reference Root}, StringFormat='{0} медиа'}"
+                                   Style="{StaticResource ChipLabelStyle}"
+                                   InputTransparent="True" />
+                        </HorizontalStackLayout>
+                        <ScrollView Orientation="Horizontal"
+                                    HorizontalScrollBarVisibility="Never"
+                                    HeightRequest="33"
+                                    IsVisible="{Binding HasTags, Source={x:Reference Root}}"
+                                    InputTransparent="True">
+                            <HorizontalStackLayout BindableLayout.ItemsSource="{Binding Tags, Source={x:Reference Root}}"
+                                                   BindableLayout.ItemTemplate="{StaticResource ContentTagChipTemplate}"
+                                                   Spacing="6"
+                                                   VerticalOptions="Center"
+                                                   Padding="0,1,0,1" />
+                        </ScrollView>
+                    </VerticalStackLayout>
+                </Grid>
+                <HorizontalStackLayout HorizontalOptions="End"
+                                       VerticalOptions="Start"
+                                       Spacing="6"
+                                       InputTransparent="True">
+                    <Image Source="{Binding PlatformIconFile, Source={x:Reference Root}}"
+                           WidthRequest="18"
+                           HeightRequest="18"
+                           Aspect="AspectFit"
+                           VerticalOptions="Center"
+                           InputTransparent="True"
+                           SemanticProperties.Description="Соцсеть" />
+                </HorizontalStackLayout>
+            </Grid>
+        </Border>
+    </Grid>
+</ContentView>

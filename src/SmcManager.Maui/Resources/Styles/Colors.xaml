@@ -1,0 +1,43 @@
+﻿<?xml version="1.0" encoding="UTF-8" ?>
+<ResourceDictionary xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
+
+    <!-- Стартовые значения — светлая тема (переопределяются ThemeService) -->
+    <Color x:Key="BackgroundPrimary">#FFFFFF</Color>
+    <Color x:Key="BackgroundSecondary">#F2F2F7</Color>
+    <Color x:Key="BackgroundElevated">#FFFFFF</Color>
+
+    <Color x:Key="AccentPrimary">#1A1A1E</Color>
+    <Color x:Key="DownloadAccent">#1A1A1E</Color>
+    <Color x:Key="AccentSecondary">#333333</Color>
+    <Color x:Key="AccentGradientEnd">#000000</Color>
+
+    <Color x:Key="TextPrimary">#1A1A1E</Color>
+    <Color x:Key="TextSecondary">#5C5C66</Color>
+    <Color x:Key="TextMuted">#8E8E93</Color>
+
+    <Color x:Key="Divider">#E5E5EA</Color>
+    <Color x:Key="Danger">#FF5252</Color>
+    <Color x:Key="TagChipBackground">#14000000</Color>
+
+  <!-- Чипы тегов в стиле соцсетей -->
+    <Color x:Key="TagChipFill">#F0F0F2</Color>
+    <Color x:Key="TagChipStroke">#D1D1D6</Color>
+    <Color x:Key="TagChipText">#1A1A1E</Color>
+    <Color x:Key="TagChipSelectedFill">#1A1A1E</Color>
+    <Color x:Key="TagChipSelectedText">#FFFFFF</Color>
+
+    <Color x:Key="Primary">#1A1A1E</Color>
+    <Color x:Key="Secondary">#333333</Color>
+    <Color x:Key="White">#FFFFFF</Color>
+    <Color x:Key="Black">#000000</Color>
+
+    <x:String x:Key="MenuIcon">menu_dark.png</x:String>
+    <x:String x:Key="CarouselPrevIcon">carousel_prev.png</x:String>
+    <x:String x:Key="CarouselNextIcon">carousel_next.png</x:String>
+    <x:String x:Key="MediaExpandIcon">icon_expand.png</x:String>
+    <x:String x:Key="MediaCollapseIcon">icon_collapse.png</x:String>
+    <x:String x:Key="ExplorerIcon">icon_explorer.png</x:String>
+    <x:String x:Key="FolderIcon">icon_folder.png</x:String>
+
+</ResourceDictionary>

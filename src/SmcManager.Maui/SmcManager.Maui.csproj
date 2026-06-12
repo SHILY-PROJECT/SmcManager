@@ -1,0 +1,78 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFrameworks>net10.0-android;net10.0-windows10.0.19041.0</TargetFrameworks>
+
+        <OutputType>Exe</OutputType>
+        <RootNamespace>SmcManager.Maui</RootNamespace>
+        <UseMaui>true</UseMaui>
+        <SingleProject>true</SingleProject>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <MauiXamlInflator>SourceGen</MauiXamlInflator>
+        <!-- CommunityToolkit.Maui 14.x требует Microsoft.Maui.Controls >= 10.0.60 -->
+        <MauiVersion>10.0.60</MauiVersion>
+
+        <!-- Имя под иконкой на Android и в списке приложений (см. AppBranding.FullTitle) -->
+        <ApplicationTitle>SmcManager - от меня щас что требуется?</ApplicationTitle>
+        <ApplicationId>com.shily.smcmanager</ApplicationId>
+        <ApplicationDisplayVersion>0.1.87</ApplicationDisplayVersion>
+<!--        <ApplicationVersion>104</ApplicationVersion>-->
+        <WindowsPackageType>None</WindowsPackageType>
+        <ApplicationIcon Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">Resources\AppIcon\appicon.ico</ApplicationIcon>
+
+        <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">34.0</SupportedOSPlatformVersion>
+        <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</SupportedOSPlatformVersion>
+        <TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <MauiIcon Include="Resources\AppIcon\appicon.png"
+                  ForegroundFile="Resources\AppIcon\appiconfg.png"
+                  Color="#0D0D12"
+                  ForegroundScale="0.68" />
+        <MauiSplashScreen Include="Resources\AppIcon\appiconfg.png"
+                          Color="#0D0D12"
+                          BaseSize="256,256" />
+        <MauiImage Include="Resources\Images\*" />
+        <MauiImage Update="Resources\Images\app_logo.png" BaseSize="44,44" Resize="True" />
+        <MauiImage Update="Resources\Images\tab_*.svg" BaseSize="24,24" Resize="True" />
+        <MauiImage Update="Resources\Images\tab_*_dark.svg" BaseSize="24,24" Resize="True" />
+        <MauiImage Update="Resources\Images\carousel_*.svg" BaseSize="24,24" Resize="True" />
+        <MauiImage Update="Resources\Images\icon_edit*.svg" BaseSize="24,24" Resize="True" />
+        <MauiImage Update="Resources\Images\icon_delete*.svg" BaseSize="24,24" Resize="True" />
+        <MauiImage Update="Resources\Images\icon_paste*.svg" BaseSize="24,24" Resize="True" />
+        <MauiImage Update="Resources\Images\icon_download_btn.svg" BaseSize="24,24" Resize="True" />
+        <MauiImage Update="Resources\Images\icon_add.svg" BaseSize="24,24" Resize="True" />
+        <MauiImage Update="Resources\Images\icon_check.svg" BaseSize="24,24" Resize="True" />
+        <MauiImage Update="Resources\Images\icon_folder*.svg" BaseSize="24,24" Resize="True" />
+        <MauiImage Update="Resources\Images\icon_explorer*.svg" BaseSize="24,24" Resize="True" />
+        <MauiImage Update="Resources\Images\icon_link.svg" BaseSize="24,24" Resize="True" />
+        <MauiImage Update="Resources\Images\icon_share*.svg" BaseSize="24,24" Resize="True" />
+        <MauiImage Update="Resources\Images\icon_platform_*.svg" BaseSize="20,20" Resize="True" />
+        <MauiImage Update="Resources\Images\icon_user_*.svg" BaseSize="20,20" Resize="True" />
+        <MauiImage Update="Resources\Images\icon_expand*.svg" BaseSize="24,24" Resize="True" />
+        <MauiImage Update="Resources\Images\icon_collapse*.svg" BaseSize="24,24" Resize="True" />
+        <MauiFont Include="Resources\Fonts\*" />
+        <MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="CommunityToolkit.Maui.MediaElement" Version="9.0.0" />
+        <PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
+        <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.0" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
+        <PackageReference Include="Serilog" Version="4.2.0" />
+        <PackageReference Include="Serilog.Extensions.Logging" Version="9.0.0" />
+        <PackageReference Include="Serilog.Sinks.Debug" Version="3.0.0" />
+        <PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
+        <PackageReference Include="CommunityToolkit.Maui" Version="14.1.1" />
+        <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\SmcManager.Core\SmcManager.Core.csproj" />
+        <ProjectReference Include="..\SmcManager.Infrastructure\SmcManager.Infrastructure.csproj" />
+    </ItemGroup>
+
+</Project>

@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:SmcManager.Maui.ViewModels"
+             xmlns:models="clr-namespace:SmcManager.Maui.Models"
+             xmlns:controls="clr-namespace:SmcManager.Maui.Views.Controls"
+             x:Class="SmcManager.Maui.Views.TagsPage"
+             x:DataType="vm:TagsViewModel"
+             Shell.NavBarIsVisible="False"
+             Title="Теги"
+             BackgroundColor="{DynamicResource BackgroundPrimary}">
+    <Grid RowDefinitions="Auto,*">
+        <controls:AppHeaderView Grid.Row="0"
+                                Title="Теги"
+                                ShowTitle="True" />
+        <ScrollView Grid.Row="1">
+            <VerticalStackLayout Padding="{StaticResource PageScrollContentPaddingWide}" Spacing="20">
+                <Border Style="{StaticResource CardBorderStyle}">
+                    <VerticalStackLayout Spacing="14">
+                        <Label Text="Новый тег"
+                               Style="{StaticResource SectionTitleStyle}"
+                               FontSize="18" />
+                        <Label Text="Создайте свои категории для сортировки скачанного контента."
+                               Style="{StaticResource SectionSubtitleStyle}" />
+                        <Label Text="Быстрые эмодзи"
+                               Style="{StaticResource SectionSubtitleStyle}" />
+                        <CollectionView ItemsSource="{Binding EmojiSuggestions}"
+                                        HeightRequest="44"
+                                        SelectionMode="None">
+                            <CollectionView.ItemsLayout>
+                                <LinearItemsLayout Orientation="Horizontal" ItemSpacing="6" />
+                            </CollectionView.ItemsLayout>
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate x:DataType="x:String">
+                                    <Button Text="{Binding .}"
+                                            Style="{StaticResource SecondaryButtonStyle}"
+                                            FontSize="20"
+                                            Padding="10,4"
+                                            MinimumWidthRequest="44"
+                                            MinimumHeightRequest="40"
+                                            Command="{Binding Source={RelativeSource AncestorType={x:Type vm:TagsViewModel}}, Path=AppendEmojiCommand}"
+                                            CommandParameter="{Binding .}" />
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+                        </CollectionView>
+                        <Grid ColumnDefinitions="*,Auto,Auto"
+                              ColumnSpacing="8">
+                            <Border Grid.Column="0"
+                                    Style="{StaticResource InputBorderStyle}"
+                                    HeightRequest="48"
+                                    VerticalOptions="Center">
+                                <Entry Text="{Binding NewTagName}"
+                                       Placeholder="Название тега (можно с эмодзи 🍕)"
+                                       Style="{StaticResource EmojiCapableEntryStyle}"
+                                       TextColor="{DynamicResource TextPrimary}"
+                                       PlaceholderColor="{DynamicResource TextMuted}"
+                                       MaxLength="32"
+                                       VerticalOptions="Center" />
+                            </Border>
+                            <controls:TagColorPickerView Grid.Column="1"
+                                                         SelectedColor="{Binding SelectedColor}"
+                                                         PickColorCommand="{Binding PickNewTagColorCommand}"
+                                                         VerticalOptions="Center" />
+                            <Button Grid.Column="2"
+                                    Style="{StaticResource PrimaryIconButtonStyle}"
+                                    VerticalOptions="Center"
+                                    ImageSource="{DynamicResource AddTagIcon}"
+                                    Command="{Binding AddTagCommand}"
+                                    SemanticProperties.Description="Добавить тег" />
+                        </Grid>
+                    </VerticalStackLayout>
+                </Border>
+
+                <Label Text="Ваши теги"
+                       Style="{StaticResource SectionTitleStyle}" />
+
+                <CollectionView ItemsSource="{Binding Tags}"
+                                SelectionMode="None">
+                    <CollectionView.ItemsLayout>
+                        <LinearItemsLayout Orientation="Vertical" ItemSpacing="5" />
+                    </CollectionView.ItemsLayout>
+                    <CollectionView.EmptyView>
+                        <Label Text="Пока нет тегов — создайте первый выше."
+                               TextColor="{DynamicResource TextMuted}"
+                               FontSize="14"
+                               HorizontalOptions="Center"
+                               Margin="12" />
+                    </CollectionView.EmptyView>
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate x:DataType="models:TagRowViewModel">
+                            <Border Style="{StaticResource CardBorderStyle}"
+                                    Padding="6,4"
+                                    MinimumHeightRequest="68">
+                                <Grid ColumnDefinitions="*,Auto,Auto"
+                                      ColumnSpacing="6">
+                                    <!-- Просмотр -->
+                                    <VerticalStackLayout Grid.Column="0"
+                                                         Spacing="3"
+                                                         VerticalOptions="Center"
+                                                         IsVisible="{Binding IsEditing, Converter={StaticResource InvertedBoolConverter}}">
+                                        <controls:TagChipView Text="{Binding Name}"
+                                                              ColorHex="{Binding ColorHex}"
+                                                              HorizontalOptions="Start" />
+                                        <Label Text="{Binding UsageText}"
+                                               TextColor="{DynamicResource TextMuted}"
+                                               FontSize="11"
+                                               Margin="4,0,0,0" />
+                                    </VerticalStackLayout>
+
+                                    <!-- Редактирование в строке -->
+                                    <Grid Grid.Column="0"
+                                          ColumnDefinitions="*,Auto"
+                                          ColumnSpacing="6"
+                                          IsVisible="{Binding IsEditing}"
+                                          VerticalOptions="Fill">
+                                        <Border Style="{StaticResource InputBorderStyle}"
+                                                VerticalOptions="Fill">
+                                            <Entry Text="{Binding EditName}"
+                                                   Style="{StaticResource EmojiCapableEntryStyle}"
+                                                   TextColor="{DynamicResource TextPrimary}"
+                                                   PlaceholderColor="{DynamicResource TextMuted}"
+                                                   MaxLength="32"
+                                                   VerticalOptions="Center" />
+                                        </Border>
+                                        <controls:TagColorPickerView Grid.Column="1"
+                                                                     WidthRequest="40"
+                                                                     HeightRequest="40"
+                                                                     SelectedColor="{Binding EditColorHex}"
+                                                                     PickColorCommand="{Binding Source={RelativeSource AncestorType={x:Type vm:TagsViewModel}}, Path=PickRowColorCommand}"
+                                                                     CommandParameter="{Binding .}"
+                                                                     VerticalOptions="Center" />
+                                    </Grid>
+
+                                    <ImageButton Grid.Column="1"
+                                                 Style="{StaticResource TagRowActionButtonStyle}"
+                                                 Source="{DynamicResource EditIcon}"
+                                                 VerticalOptions="Center"
+                                                 Command="{Binding Source={RelativeSource AncestorType={x:Type vm:TagsViewModel}}, Path=EditTagCommand}"
+                                                 CommandParameter="{Binding .}"
+                                                 SemanticProperties.Description="Редактировать тег"
+                                                 IsVisible="{Binding IsEditing, Converter={StaticResource InvertedBoolConverter}}" />
+
+                                    <ImageButton Grid.Column="2"
+                                                 Style="{StaticResource TagRowActionButtonStyle}"
+                                                 Source="{DynamicResource DeleteIcon}"
+                                                 VerticalOptions="Center"
+                                                 Command="{Binding Source={RelativeSource AncestorType={x:Type vm:TagsViewModel}}, Path=DeleteTagCommand}"
+                                                 CommandParameter="{Binding .}"
+                                                 SemanticProperties.Description="Удалить тег"
+                                                 IsVisible="{Binding IsEditing, Converter={StaticResource InvertedBoolConverter}}" />
+
+                                    <Button Grid.Column="1"
+                                            Style="{StaticResource TagRowPrimaryIconButtonStyle}"
+                                            VerticalOptions="Center"
+                                            ImageSource="{DynamicResource SaveTagIcon}"
+                                            Command="{Binding Source={RelativeSource AncestorType={x:Type vm:TagsViewModel}}, Path=SaveRowTagCommand}"
+                                            CommandParameter="{Binding .}"
+                                            SemanticProperties.Description="Сохранить тег"
+                                            IsVisible="{Binding IsEditing}" />
+
+                                    <Button Grid.Column="2"
+                                            Text="✕"
+                                            Style="{StaticResource TagRowSecondaryIconButtonStyle}"
+                                            VerticalOptions="Center"
+                                            Command="{Binding Source={RelativeSource AncestorType={x:Type vm:TagsViewModel}}, Path=CancelRowEditCommand}"
+                                            CommandParameter="{Binding .}"
+                                            SemanticProperties.Description="Отменить редактирование"
+                                            IsVisible="{Binding IsEditing}" />
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+
+                <Label Text="{Binding StatusMessage}"
+                       TextColor="{DynamicResource AccentSecondary}"
+                       FontSize="13" />
+            </VerticalStackLayout>
+        </ScrollView>
+    </Grid>
+</ContentPage>

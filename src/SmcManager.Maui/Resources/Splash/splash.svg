@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg width="456" height="456" viewBox="0 0 456 456"
+     xmlns="http://www.w3.org/2000/svg"
+     version="1.1">
+  <!-- Фон -->
+  <rect x="0" y="0" width="456" height="456" fill="#0D0D12" />
+
+  <!-- Простая «свинья» в виде иконки -->
+  <!-- Голова -->
+  <circle cx="228" cy="180" r="90" fill="#FF7BAC" />
+  <!-- Уши -->
+  <polygon points="168,120 200,110 195,150" fill="#FF7BAC" />
+  <polygon points="288,120 256,110 261,150" fill="#FF7BAC" />
+  <!-- Пятачок -->
+  <ellipse cx="228" cy="200" rx="40" ry="28" fill="#FF9CC2" />
+  <circle cx="216" cy="200" r="6" fill="#E14A7A" />
+  <circle cx="240" cy="200" r="6" fill="#E14A7A" />
+  <!-- Глаза -->
+  <circle cx="202" cy="170" r="8" fill="#FFFFFF" />
+  <circle cx="254" cy="170" r="8" fill="#FFFFFF" />
+  <circle cx="202" cy="170" r="4" fill="#000000" />
+  <circle cx="254" cy="170" r="4" fill="#000000" />
+
+  <!-- Текст вместо ".NET" -->
+  <text x="228" y="320"
+        text-anchor="middle"
+        font-size="20"
+        font-family="Segoe UI, system-ui, sans-serif"
+        fill="#FFFFFF">
+    ОТ МЕНЯ ЩА ЧЁ ТРЕБУЕТСЯ?!
+  </text>
+</svg>

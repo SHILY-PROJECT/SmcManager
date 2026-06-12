@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:SmcManager.Maui.ViewModels"
+             xmlns:controls="clr-namespace:SmcManager.Maui.Views.Controls"
+             x:Class="SmcManager.Maui.Views.LibraryPage"
+             x:DataType="vm:LibraryViewModel"
+             Shell.NavBarIsVisible="False"
+             Title="Контент"
+             BackgroundColor="{DynamicResource BackgroundPrimary}">
+    <Grid RowDefinitions="Auto,*">
+        <controls:AppHeaderView Grid.Row="0"
+                                Title="Контент"
+                                ShowTitle="True" />
+        <RefreshView Grid.Row="1"
+                     IsRefreshing="{Binding IsRefreshing}"
+                     Command="{Binding RefreshCommand}">
+            <CollectionView ItemsSource="{Binding Items}"
+                            Margin="0,0,0,16">
+                <CollectionView.ItemsLayout>
+                    <LinearItemsLayout Orientation="Vertical" ItemSpacing="5" />
+                </CollectionView.ItemsLayout>
+                <CollectionView.EmptyView>
+                    <Label Text="Список пуст. Скачайте первый пост в разделе «Скачать»."
+                           TextColor="{DynamicResource TextMuted}"
+                           HorizontalOptions="Center"
+                           Margin="24" />
+                </CollectionView.EmptyView>
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="vm:ContentItemDisplayModel">
+                        <controls:ContentCardView Item="{Binding .}"
+                                                  OpenCommand="{Binding Source={RelativeSource AncestorType={x:Type vm:LibraryViewModel}}, Path=OpenContentCommand}"
+                                                  DeleteCommand="{Binding Source={RelativeSource AncestorType={x:Type vm:LibraryViewModel}}, Path=DeleteItemCommand}" />
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </RefreshView>
+    </Grid>
+</ContentPage>

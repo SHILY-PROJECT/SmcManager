@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Shell xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+       xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+       xmlns:views="clr-namespace:SmcManager.Maui.Views"
+       xmlns:models="clr-namespace:SmcManager.Maui.Models"
+       xmlns:services="clr-namespace:SmcManager.Maui.Services"
+       x:Class="SmcManager.Maui.AppShell"
+       x:Name="ShellRoot"
+       FlyoutBehavior="Flyout"
+       FlyoutWidth="300"
+       Shell.FlyoutBackgroundColor="{DynamicResource BackgroundSecondary}"
+       Shell.NavBarIsVisible="False"
+       Shell.NavBarHasShadow="False"
+       Shell.BackgroundColor="{DynamicResource BackgroundPrimary}"
+       Shell.ForegroundColor="{DynamicResource TextPrimary}"
+       Shell.TitleColor="{DynamicResource TextPrimary}"
+       Title="">
+
+    <Shell.FlyoutContent>
+        <Grid RowDefinitions="Auto,*"
+              SafeAreaEdges="Container"
+              Padding="0,16,0,16"
+              BackgroundColor="{DynamicResource BackgroundSecondary}">
+            <Grid Grid.Row="0"
+                  Padding="18,0,18,12"
+                  ColumnDefinitions="Auto,*"
+                  ColumnSpacing="12">
+                <Border Grid.Column="0"
+                        WidthRequest="56"
+                        HeightRequest="56"
+                        VerticalOptions="Center"
+                        BackgroundColor="{DynamicResource BackgroundPrimary}"
+                        Stroke="{DynamicResource Divider}"
+                        StrokeThickness="1">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="14" />
+                    </Border.StrokeShape>
+                    <Image Source="app_logo.png"
+                           WidthRequest="44"
+                           HeightRequest="44"
+                           Aspect="AspectFit"
+                           HorizontalOptions="Center"
+                           VerticalOptions="Center" />
+                </Border>
+                <VerticalStackLayout Grid.Column="1"
+                                     Spacing="2"
+                                     VerticalOptions="Center">
+                    <Label Text="{x:Static services:AppBranding.AppName}"
+                           FontSize="18"
+                           FontAttributes="Bold"
+                           TextColor="{DynamicResource TextPrimary}" />
+                    <Label Text="{x:Static services:AppBranding.FlyoutTagline}"
+                           FontSize="12"
+                           TextColor="{DynamicResource TextSecondary}"
+                           LineBreakMode="WordWrap" />
+                </VerticalStackLayout>
+            </Grid>
+            <CollectionView Grid.Row="1"
+                            x:Name="FlyoutMenuView"
+                            ItemsSource="{Binding FlyoutMenuItems, Source={x:Reference ShellRoot}}"
+                            SelectionMode="Single"
+                            SelectionChanged="OnFlyoutMenuSelectionChanged">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="models:FlyoutMenuItem">
+                        <Grid Padding="18,14"
+                              ColumnDefinitions="Auto,*"
+                              ColumnSpacing="14"
+                              BackgroundColor="Transparent">
+                            <Image Source="{Binding Icon}"
+                                   WidthRequest="22"
+                                   HeightRequest="22"
+                                   VerticalOptions="Center" />
+                            <Label Grid.Column="1"
+                                   Text="{Binding Title}"
+                                   FontSize="16"
+                                   TextColor="{DynamicResource TextPrimary}"
+                                   VerticalOptions="Center" />
+                        </Grid>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </Grid>
+    </Shell.FlyoutContent>
+
+    <FlyoutItem Title="Главная"
+                Route="download"
+                Shell.FlyoutItemIsVisible="False">
+        <ShellContent ContentTemplate="{DataTemplate views:DownloadPage}" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Контент"
+                Route="library"
+                Shell.FlyoutItemIsVisible="False">
+        <ShellContent ContentTemplate="{DataTemplate views:LibraryPage}" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Группы"
+                Route="groups"
+                Shell.FlyoutItemIsVisible="False">
+        <ShellContent ContentTemplate="{DataTemplate views:GroupsPage}" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Теги"
+                Route="tags"
+                Shell.FlyoutItemIsVisible="False">
+        <ShellContent ContentTemplate="{DataTemplate views:TagsPage}" />
+    </FlyoutItem>
+</Shell>

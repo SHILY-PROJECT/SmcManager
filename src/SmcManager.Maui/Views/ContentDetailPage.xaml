@@ -1,0 +1,412 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:SmcManager.Maui.ViewModels"
+             xmlns:models="clr-namespace:SmcManager.Maui.Models"
+             xmlns:views="clr-namespace:SmcManager.Maui.Views"
+             xmlns:controls="clr-namespace:SmcManager.Maui.Views.Controls"
+             xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+             x:Class="SmcManager.Maui.Views.ContentDetailPage"
+             x:Name="DetailPage"
+             x:DataType="vm:ContentDetailViewModel"
+             Shell.NavBarIsVisible="False"
+             Shell.BackgroundColor="{DynamicResource BackgroundPrimary}"
+             Shell.ForegroundColor="{DynamicResource TextPrimary}"
+             Shell.TitleColor="{DynamicResource TextPrimary}"
+             Title="Просмотр"
+             BackgroundColor="{DynamicResource BackgroundPrimary}">
+    <Grid RowDefinitions="Auto,*,Auto">
+        <controls:AppHeaderView Grid.Row="0"
+                                Title="Просмотр"
+                                ShowTitle="True" />
+
+        <ScrollView Grid.Row="1">
+            <VerticalStackLayout Padding="{StaticResource PageScrollContentPadding}" Spacing="16">
+            <Grid IsVisible="{Binding HasMediaSlides}"
+                  ColumnDefinitions="48,*,48"
+                  ColumnSpacing="6"
+                  HeightRequest="{Binding MediaCarouselHeight}">
+                <Button x:Name="CarouselPrevButton"
+                        Grid.Column="0"
+                        Style="{StaticResource SecondaryIconButtonStyle}"
+                        Command="{Binding GoToPreviousSlideCommand}"
+                        IsVisible="{Binding ShowCarouselPrevious}"
+                        VerticalOptions="Center"
+                        HorizontalOptions="Center"
+                        SemanticProperties.Description="Предыдущий слайд" />
+
+                <Grid Grid.Column="1"
+                      RowDefinitions="*,Auto">
+                    <Grid Grid.Row="0">
+                        <CarouselView x:Name="MediaCarousel"
+                                      ItemsSource="{Binding MediaSlides}"
+                                      IndicatorView="{x:Reference MediaIndicator}"
+                                      Loop="False"
+                                      ZIndex="0">
+                            <CarouselView.ItemTemplate>
+                                <DataTemplate x:DataType="vm:MediaSlideViewModel">
+                                    <Grid VerticalOptions="Fill">
+                                        <controls:LocalImageView ImagePath="{Binding DisplayImagePath}"
+                                                                 ImageAspect="AspectFit"
+                                                                 HorizontalOptions="Fill"
+                                                                 VerticalOptions="Fill" />
+                                    </Grid>
+                                </DataTemplate>
+                            </CarouselView.ItemTemplate>
+                        </CarouselView>
+
+                        <toolkit:MediaElement x:Name="VideoPlayer"
+                                              Source="{Binding CurrentVideoSource}"
+                                              IsVisible="{Binding ShowCurrentVideoPlayer}"
+                                              IsEnabled="{Binding ShowCurrentVideoPlayer}"
+                                              ShouldAutoPlay="False"
+                                              ShouldShowPlaybackControls="True"
+                                              ShouldLoopPlayback="False"
+                                              Aspect="AspectFit"
+                                              HorizontalOptions="Fill"
+                                              VerticalOptions="Fill"
+                                              ZIndex="1" />
+
+                        <ImageButton Style="{StaticResource IconActionButtonStyle}"
+                                     WidthRequest="56"
+                                     HeightRequest="56"
+                                     Padding="14"
+                                     HorizontalOptions="Center"
+                                     VerticalOptions="Center"
+                                     IsVisible="{Binding ShowVideoPlayPrompt}"
+                                     Command="{Binding PlayCurrentVideoCommand}"
+                                     SemanticProperties.Description="Воспроизвести видео"
+                                     ZIndex="2">
+                            <ImageButton.Source>
+                                <FontImageSource Glyph="▶"
+                                                 Color="{DynamicResource TextPrimary}"
+                                                 Size="22" />
+                            </ImageButton.Source>
+                        </ImageButton>
+
+                    </Grid>
+
+                    <VerticalStackLayout Grid.Row="1"
+                                         Spacing="4"
+                                         Padding="0,6,0,0"
+                                         HorizontalOptions="Center"
+                                         IsVisible="{Binding HasMultipleSlides}">
+                        <IndicatorView x:Name="MediaIndicator"
+                                       IndicatorColor="{DynamicResource TextMuted}"
+                                       SelectedIndicatorColor="{DynamicResource AccentPrimary}" />
+
+                        <Label Text="{Binding SlideIndicator}"
+                               HorizontalOptions="Center"
+                               HorizontalTextAlignment="Center"
+                               TextColor="{DynamicResource TextMuted}"
+                               FontSize="12" />
+                    </VerticalStackLayout>
+                </Grid>
+
+                <Button x:Name="CarouselNextButton"
+                        Grid.Column="2"
+                        Style="{StaticResource SecondaryIconButtonStyle}"
+                        Command="{Binding GoToNextSlideCommand}"
+                        IsVisible="{Binding ShowCarouselNext}"
+                        VerticalOptions="Center"
+                        HorizontalOptions="Center"
+                        SemanticProperties.Description="Следующий слайд" />
+            </Grid>
+
+            <Button x:Name="ShareCurrentMediaButton"
+                    Style="{StaticResource SecondaryIconButtonStyle}"
+                    HorizontalOptions="Center"
+                    IsVisible="{Binding HasMediaSlides}"
+                    Command="{Binding ShareMediaCommand}"
+                    SemanticProperties.Description="Поделиться текущим файлом" />
+
+            <Label Text="{Binding AuthorTitle}"
+                   Style="{StaticResource EmojiCapableLabelStyle}"
+                   FontSize="20"
+                   FontAttributes="Bold"
+                   TextColor="{DynamicResource TextPrimary}" />
+
+            <toolkit:Expander IsExpanded="True"
+                              IsVisible="{Binding IsContentLoaded}">
+                <toolkit:Expander.Header>
+                    <controls:SettingsSectionHeaderView Icon="🏷️"
+                                                        Title="Теги" />
+                </toolkit:Expander.Header>
+                <Border Style="{StaticResource CardBorderStyle}"
+                        Margin="0,8,0,0"
+                        Padding="4,4,4,10">
+                    <VerticalStackLayout Spacing="12">
+                        <Grid ColumnDefinitions="*,Auto"
+                              ColumnSpacing="8"
+                              HeightRequest="40">
+                            <CollectionView Grid.Column="0"
+                                            ItemsSource="{Binding TagChips}"
+                                            HeightRequest="40"
+                                            SelectionMode="None">
+                                <CollectionView.ItemsLayout>
+                                    <LinearItemsLayout Orientation="Horizontal"
+                                                       ItemSpacing="6" />
+                                </CollectionView.ItemsLayout>
+                                <CollectionView.ItemTemplate>
+                                    <DataTemplate x:DataType="models:TagChipViewModel">
+                                        <controls:TagChipView Text="{Binding Name}"
+                                                              ColorHex="{Binding ColorHex}"
+                                                              IsSelected="{Binding IsSelected}"
+                                                              SelectCommand="{Binding Source={RelativeSource AncestorType={x:Type vm:ContentDetailViewModel}}, Path=ToggleContentTagCommand}"
+                                                              SelectParameter="{Binding .}"
+                                                              VerticalOptions="Center" />
+                                    </DataTemplate>
+                                </CollectionView.ItemTemplate>
+                                <CollectionView.EmptyView>
+                                    <Label Text="Нет тегов"
+                                           TextColor="{DynamicResource TextMuted}"
+                                           FontSize="13"
+                                           VerticalOptions="Center" />
+                                </CollectionView.EmptyView>
+                            </CollectionView>
+                            <ImageButton Grid.Column="1"
+                                         WidthRequest="40"
+                                         HeightRequest="40"
+                                         Style="{StaticResource TagRowActionButtonStyle}"
+                                         Source="{DynamicResource AddTagIcon}"
+                                         VerticalOptions="Center"
+                                         Command="{Binding ToggleNewTagPanelCommand}"
+                                         SemanticProperties.Description="Добавить новый тег" />
+                        </Grid>
+
+                        <VerticalStackLayout Spacing="14"
+                                             IsVisible="{Binding IsNewTagPanelVisible}">
+                            <Label Text="Новый тег"
+                                   Style="{StaticResource SectionTitleStyle}"
+                                   FontSize="18" />
+                            <Label Text="Быстрые эмодзи"
+                                   Style="{StaticResource SectionSubtitleStyle}" />
+                            <CollectionView ItemsSource="{Binding EmojiSuggestions}"
+                                            HeightRequest="44"
+                                            SelectionMode="None">
+                                <CollectionView.ItemsLayout>
+                                    <LinearItemsLayout Orientation="Horizontal"
+                                                       ItemSpacing="6" />
+                                </CollectionView.ItemsLayout>
+                                <CollectionView.ItemTemplate>
+                                    <DataTemplate x:DataType="x:String">
+                                        <Button Text="{Binding .}"
+                                                Style="{StaticResource SecondaryButtonStyle}"
+                                                FontSize="20"
+                                                Padding="10,4"
+                                                MinimumWidthRequest="44"
+                                                MinimumHeightRequest="40"
+                                                Command="{Binding Source={RelativeSource AncestorType={x:Type vm:ContentDetailViewModel}}, Path=AppendEmojiCommand}"
+                                                CommandParameter="{Binding .}" />
+                                    </DataTemplate>
+                                </CollectionView.ItemTemplate>
+                            </CollectionView>
+                            <Grid ColumnDefinitions="*,Auto,Auto"
+                                  ColumnSpacing="8">
+                                <Border Grid.Column="0"
+                                        Style="{StaticResource InputBorderStyle}"
+                                        HeightRequest="48"
+                                        VerticalOptions="Center">
+                                    <Entry Text="{Binding NewTagName}"
+                                           Placeholder="Название тега (можно с эмодзи 🍕)"
+                                           Style="{StaticResource EmojiCapableEntryStyle}"
+                                           TextColor="{DynamicResource TextPrimary}"
+                                           PlaceholderColor="{DynamicResource TextMuted}"
+                                           MaxLength="32"
+                                           VerticalOptions="Center" />
+                                </Border>
+                                <controls:TagColorPickerView Grid.Column="1"
+                                                             SelectedColor="{Binding SelectedTagColor}"
+                                                             PickColorCommand="{Binding PickNewTagColorCommand}"
+                                                             VerticalOptions="Center" />
+                                <Button Grid.Column="2"
+                                        Style="{StaticResource PrimaryIconButtonStyle}"
+                                        VerticalOptions="Center"
+                                        ImageSource="{DynamicResource AddTagIcon}"
+                                        Command="{Binding AddContentTagCommand}"
+                                        SemanticProperties.Description="Добавить тег" />
+                            </Grid>
+                            <Label Text="{Binding NewTagStatusMessage}"
+                                   Style="{StaticResource EmojiCapableLabelStyle}"
+                                   TextColor="{DynamicResource AccentSecondary}"
+                                   FontSize="13" />
+                        </VerticalStackLayout>
+                    </VerticalStackLayout>
+                </Border>
+            </toolkit:Expander>
+
+            <toolkit:Expander IsExpanded="True"
+                              IsVisible="{Binding IsContentLoaded}">
+                <toolkit:Expander.Header>
+                    <controls:SettingsSectionHeaderView Icon="📝"
+                                                        Title="Описание" />
+                </toolkit:Expander.Header>
+                <Border Style="{StaticResource CardBorderStyle}" Margin="0,8,0,0">
+                    <VerticalStackLayout Spacing="8" Padding="4">
+                        <Grid ColumnDefinitions="*,Auto"
+                              ColumnSpacing="8"
+                              IsVisible="{Binding ShowEditCaptionButton}">
+                            <Label Text="Текст из соцсети"
+                                   Style="{StaticResource SectionSubtitleStyle}"
+                                   VerticalOptions="Center" />
+                            <ImageButton x:Name="EditCaptionButton"
+                                         Grid.Column="1"
+                                         Style="{StaticResource IconActionButtonStyle}"
+                                         Command="{Binding EditCaptionCommand}"
+                                         SemanticProperties.Description="Редактировать описание" />
+                        </Grid>
+
+                        <Label Text="{Binding Caption}"
+                               Style="{StaticResource EmojiCapableLabelStyle}"
+                               TextColor="{DynamicResource TextPrimary}"
+                               FontSize="14"
+                               LineBreakMode="WordWrap"
+                               MaxLines="{Binding DescriptionMaxLines}"
+                               IsVisible="{Binding ShowCaptionReadOnly}" />
+
+                        <Label Text="Описание отсутствует"
+                               TextColor="{DynamicResource TextMuted}"
+                               FontSize="14"
+                               IsVisible="{Binding ShowCaptionPlaceholder}" />
+
+                        <VerticalStackLayout IsVisible="{Binding IsEditingCaption}"
+                                             Spacing="8">
+                            <Border Style="{StaticResource InputBorderStyle}">
+                                <Editor Text="{Binding CaptionDraft}"
+                                        Style="{StaticResource EmojiCapableEditorStyle}"
+                                        AutoSize="TextChanges"
+                                        MinimumHeightRequest="160"
+                                        TextColor="{DynamicResource TextPrimary}"
+                                        BackgroundColor="Transparent" />
+                            </Border>
+                            <Grid ColumnDefinitions="*,*"
+                                  ColumnSpacing="10">
+                                <Button Text="Сохранить"
+                                        Style="{StaticResource PrimaryButtonStyle}"
+                                        Command="{Binding SaveCaptionCommand}" />
+                                <Button Grid.Column="1"
+                                        Text="Отмена"
+                                        Style="{StaticResource SecondaryButtonStyle}"
+                                        Command="{Binding CancelCaptionEditCommand}" />
+                            </Grid>
+                        </VerticalStackLayout>
+
+                        <Button Text="{Binding DescriptionToggleText}"
+                                Style="{StaticResource NeutralTextButtonStyle}"
+                                Command="{Binding ToggleDescriptionCommand}"
+                                IsVisible="{Binding CanToggleDescription}"
+                                HorizontalOptions="Start" />
+                    </VerticalStackLayout>
+                </Border>
+            </toolkit:Expander>
+
+            <toolkit:Expander IsExpanded="True"
+                              IsVisible="{Binding IsContentLoaded}">
+                <toolkit:Expander.Header>
+                    <controls:SettingsSectionHeaderView Icon="🗒️"
+                                                        Title="Комментарий" />
+                </toolkit:Expander.Header>
+                <Border Style="{StaticResource CardBorderStyle}" Margin="0,8,0,0">
+                    <VerticalStackLayout Spacing="8" Padding="4">
+                        <Grid ColumnDefinitions="*,Auto"
+                              ColumnSpacing="8"
+                              IsVisible="{Binding ShowEditCommentButton}">
+                            <Label Text="Ваша заметка к этому контенту"
+                                   Style="{StaticResource SectionSubtitleStyle}"
+                                   VerticalOptions="Center" />
+                            <ImageButton x:Name="EditCommentButton"
+                                         Grid.Column="1"
+                                         Style="{StaticResource IconActionButtonStyle}"
+                                         Command="{Binding EditCommentCommand}"
+                                         SemanticProperties.Description="Редактировать комментарий" />
+                        </Grid>
+
+                        <Label Text="{Binding UserComment}"
+                               Style="{StaticResource EmojiCapableLabelStyle}"
+                               TextColor="{DynamicResource TextPrimary}"
+                               FontSize="14"
+                               LineBreakMode="WordWrap"
+                               IsVisible="{Binding ShowCommentReadOnly}" />
+
+                        <Label Text="Комментарий отсутствует"
+                               TextColor="{DynamicResource TextMuted}"
+                               FontSize="14"
+                               IsVisible="{Binding ShowCommentPlaceholder}" />
+
+                        <VerticalStackLayout IsVisible="{Binding IsEditingComment}"
+                                             Spacing="8">
+                            <Border Style="{StaticResource InputBorderStyle}">
+                                <Editor Text="{Binding CommentDraft}"
+                                        Style="{StaticResource EmojiCapableEditorStyle}"
+                                        Placeholder="Введите комментарий..."
+                                        AutoSize="TextChanges"
+                                        MinimumHeightRequest="120"
+                                        TextColor="{DynamicResource TextPrimary}"
+                                        PlaceholderColor="{DynamicResource TextMuted}"
+                                        BackgroundColor="Transparent" />
+                            </Border>
+                            <Grid ColumnDefinitions="*,*"
+                                  ColumnSpacing="10">
+                                <Button Text="Сохранить"
+                                        Style="{StaticResource PrimaryButtonStyle}"
+                                        Command="{Binding SaveCommentCommand}" />
+                                <Button Grid.Column="1"
+                                        Text="Отмена"
+                                        Style="{StaticResource SecondaryButtonStyle}"
+                                        Command="{Binding CancelCommentEditCommand}" />
+                            </Grid>
+                        </VerticalStackLayout>
+                    </VerticalStackLayout>
+                </Border>
+            </toolkit:Expander>
+            </VerticalStackLayout>
+        </ScrollView>
+
+        <Border Grid.Row="2"
+                BackgroundColor="Transparent"
+                StrokeThickness="0"
+                Padding="16,10,16,16"
+                IsVisible="{Binding IsContentLoaded}">
+            <Grid ColumnDefinitions="Auto,*,Auto"
+                  ColumnSpacing="8">
+                <Button x:Name="DeleteContentButton"
+                        Grid.Column="0"
+                        Style="{StaticResource SecondaryIconButtonStyle}"
+                        HorizontalOptions="Start"
+                        Command="{Binding DeleteContentCommand}"
+                        SemanticProperties.Description="Удалить контент" />
+
+                <HorizontalStackLayout Grid.Column="1"
+                                       Spacing="10"
+                                       HorizontalOptions="Center"
+                                       VerticalOptions="Center">
+                    <Button x:Name="OpenInExplorerButton"
+                            Style="{StaticResource SecondaryIconButtonStyle}"
+                            Command="{Binding OpenInExplorerCommand}"
+                            SemanticProperties.Description="Показать в проводнике" />
+                    <Button x:Name="OpenFolderButton"
+                            Style="{StaticResource SecondaryIconButtonStyle}"
+                            Command="{Binding OpenFolderCommand}"
+                            SemanticProperties.Description="Открыть папку" />
+                    <Button x:Name="ShareAllContentButton"
+                            Style="{StaticResource SecondaryIconButtonStyle}"
+                            Command="{Binding ShareAllContentCommand}"
+                            SemanticProperties.Description="Поделиться всем контентом" />
+                    <Button x:Name="OpenSourceButton"
+                            Style="{StaticResource PrimaryIconButtonStyle}"
+                            Command="{Binding OpenSourceCommand}"
+                            IsVisible="{Binding CanOpenSource}"
+                            SemanticProperties.Description="Открыть в соцсети" />
+                </HorizontalStackLayout>
+
+                <Button x:Name="MediaExpandButton"
+                        Grid.Column="2"
+                        Style="{StaticResource SecondaryIconButtonStyle}"
+                        HorizontalOptions="End"
+                        IsVisible="{Binding HasMediaSlides}"
+                        Command="{Binding ToggleMediaExpandCommand}"
+                        SemanticProperties.Description="Изменить размер области медиа" />
+            </Grid>
+        </Border>
+    </Grid>
+</ContentPage>
